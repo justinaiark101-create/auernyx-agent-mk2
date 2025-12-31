@@ -1168,9 +1168,13 @@ export function startDaemon(repoRoot: string) {
                     } satisfies DaemonRunResponse);
                 }
 
+                const outputs = Array.isArray(lifecycle.result) ? (lifecycle.result as any[]) : [];
+                const executedCapability =
+                    typeof outputs[0]?.tool?.name === "string" ? (outputs[0].tool.name as string) : lifecycle.capability;
+
                 return writeJson(res, 200, {
                     ok: true,
-                    capability: lifecycle.capability,
+                    capability: executedCapability,
                     result: { outputs: lifecycle.result, receipt: lifecycle.receipt, plan: lifecycle.plan },
                 } satisfies DaemonRunResponse);
             } catch (err) {
