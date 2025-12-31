@@ -3,6 +3,7 @@ import { createCore } from "../../core/server";
 import { tryRunViaDaemon } from "../../core/daemonClient";
 import { createHumanApproval } from "../../core/approvals";
 import { capabilityRequiresApproval, CapabilityName } from "../../core/policy";
+import { runLifecycle } from "../../core/runLifecycle";
 
 async function getApprovalFromUser(capability: string): Promise<ReturnType<typeof createHumanApproval> | null> {
     const pick = await vscode.window.showWarningMessage(
@@ -69,8 +70,14 @@ export function activate(context: vscode.ExtensionContext) {
                 const approval = needsApproval ? await getApprovalFromUser(capability) : null;
                 if (needsApproval && !approval) return;
 
-                const result = await core.router.run(capability, { repoRoot, sessionId: core.sessionId }, undefined, approval ?? undefined);
-                core.ledger.append(core.sessionId, "intent.routed", { input, capability, result, via: "local" });
+                const lifecycle = await runLifecycle({
+                    router: core.router,
+                    ctx: { repoRoot, sessionId: core.sessionId },
+                    intent: input,
+                    approval: approval ?? undefined,
+                });
+                if (!lifecycle.ok) throw new Error(lifecycle.refusal?.code ?? lifecycle.refusal?.reason ?? "refused");
+                core.ledger.append(core.sessionId, "intent.routed", { input, capability: lifecycle.capability, result: lifecycle.result, via: "local" });
                 vscode.window.showInformationMessage(`Auernyx: Ran ${capability}.`);
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);
@@ -91,7 +98,9 @@ export function activate(context: vscode.ExtensionContext) {
 
                     if (daemon !== null) {
                         if (!daemon.ok) throw new Error(daemon.error ?? "daemon error");
-                        const fileCount = (daemon.result as { fileCount?: number } | undefined)?.fileCount ?? 0;
+                        const outputs = (daemon.result as any)?.outputs;
+                        const first = Array.isArray(outputs) ? outputs[0] : undefined;
+                        const fileCount = Number(first?.output?.fileCount ?? 0);
                         core.ledger.append(core.sessionId, "capability.scanRepo", { ...daemon, via: "daemon" });
                         vscode.window.showInformationMessage(`Auernyx: Repo scan complete. ${fileCount} files indexed.`);
                         return;
@@ -100,9 +109,17 @@ export function activate(context: vscode.ExtensionContext) {
 
                 const approval = await getApprovalFromUser("scanRepo");
                 if (!approval) return;
-                const result = await core.router.run("scanRepo", { repoRoot, sessionId: core.sessionId }, undefined, approval);
-                core.ledger.append(core.sessionId, "capability.scanRepo", { result, via: "local" });
-                const fileCount = (result as { fileCount?: number }).fileCount ?? 0;
+
+                const lifecycle = await runLifecycle({
+                    router: core.router,
+                    ctx: { repoRoot, sessionId: core.sessionId },
+                    intent: "scan",
+                    approval,
+                });
+                if (!lifecycle.ok) throw new Error(lifecycle.refusal?.code ?? lifecycle.refusal?.reason ?? "refused");
+                core.ledger.append(core.sessionId, "capability.scanRepo", { result: lifecycle.result, via: "local" });
+                const first = Array.isArray(lifecycle.result) ? lifecycle.result[0] : lifecycle.result;
+                const fileCount = (first as { output?: { fileCount?: number } } | undefined)?.output?.fileCount ?? 0;
                 vscode.window.showInformationMessage(`Auernyx: Repo scan complete. ${fileCount} files indexed.`);
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);
@@ -130,8 +147,14 @@ export function activate(context: vscode.ExtensionContext) {
                 const approval = await getApprovalFromUser("fenerisPrep");
                 if (!approval) return;
 
-                const result = await core.router.run("fenerisPrep", { repoRoot, sessionId: core.sessionId }, undefined, approval);
-                core.ledger.append(core.sessionId, "capability.fenerisPrep", { result, via: "local" });
+                const lifecycle = await runLifecycle({
+                    router: core.router,
+                    ctx: { repoRoot, sessionId: core.sessionId },
+                    intent: "feneris",
+                    approval,
+                });
+                if (!lifecycle.ok) throw new Error(lifecycle.refusal?.code ?? lifecycle.refusal?.reason ?? "refused");
+                core.ledger.append(core.sessionId, "capability.fenerisPrep", { result: lifecycle.result, via: "local" });
                 vscode.window.showInformationMessage("Auernyx: Windows Feneris prep scaffold created.");
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);

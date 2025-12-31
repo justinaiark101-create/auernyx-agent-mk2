@@ -4,6 +4,7 @@ import { createCore } from "../../core/server";
 import { tryRunViaDaemon } from "../../core/daemonClient";
 import { createHumanApproval } from "../../core/approvals";
 import { capabilityRequiresApproval, CapabilityName } from "../../core/policy";
+import { runLifecycle } from "../../core/runLifecycle";
 import { loadConfig } from "../../core/config";
 import * as readline from "readline";
 
@@ -293,11 +294,24 @@ async function main() {
         });
     }
 
-    const result = await core.router.run(capability, { repoRoot, sessionId: core.sessionId, ledger: core.ledger }, localInput, approval);
-    core.ledger.append(core.sessionId, "cli.intent", { input: raw, capability, result });
+    const lifecycle = await runLifecycle({
+        router: core.router,
+        ctx: { repoRoot, sessionId: core.sessionId, ledger: core.ledger },
+        intent: daemonIntent,
+        input: localInput,
+        approval: approval ?? undefined,
+    });
+
+    if (!lifecycle.ok) {
+        // eslint-disable-next-line no-console
+        console.error(lifecycle.refusal?.code ?? lifecycle.refusal?.reason ?? "refused");
+        process.exit(3);
+    }
+
+    core.ledger.append(core.sessionId, "cli.intent", { input: raw, capability: lifecycle.capability, result: lifecycle.result });
 
     // eslint-disable-next-line no-console
-    console.log(JSON.stringify({ capability, result }, null, 2));
+    console.log(JSON.stringify({ capability: lifecycle.capability, result: lifecycle.result, receipt: lifecycle.receipt }, null, 2));
 }
 
 main().catch((err) => {

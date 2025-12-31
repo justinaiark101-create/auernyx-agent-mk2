@@ -10,6 +10,11 @@ export interface Approval {
     confirm?: "APPLY";
 }
 
+export interface StepApproval extends Approval {
+    stepId: string;
+    evidenceRefs?: string[];
+}
+
 export function createHumanApproval(reason: string, options?: { identity?: string; confirm?: "APPLY" }): Approval {
     return {
         approvedBy: "human",
@@ -29,6 +34,15 @@ export function isValidApproval(approval: unknown): approval is Approval {
         typeof a.reason === "string" &&
         a.reason.trim().length > 0
     );
+}
+
+export function isValidStepApproval(approval: unknown): approval is StepApproval {
+    if (!isValidApproval(approval)) return false;
+    const a = approval as unknown as Record<string, unknown>;
+    if (typeof a.stepId !== "string" || a.stepId.trim().length === 0) return false;
+    if (a.evidenceRefs === undefined) return true;
+    if (!Array.isArray(a.evidenceRefs)) return false;
+    return (a.evidenceRefs as unknown[]).every((v) => typeof v === "string" && v.trim().length > 0);
 }
 
 export function approvalIdentity(approval: Approval | undefined): string | undefined {

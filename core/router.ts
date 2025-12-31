@@ -1,7 +1,8 @@
 import { capabilityRequiresApproval, CapabilityName, getCapabilityMeta, Policy } from "./policy";
-import { Approval, ApprovalRequiredError, approvalIdentity, isValidApproval } from "./approvals";
+import { Approval, ApprovalRequiredError, approvalIdentity, isValidApproval, isValidStepApproval, StepApproval } from "./approvals";
 import { loadConfig } from "./config";
 import { readGovernanceLock } from "./governanceLock";
+import type { PlanStep } from "./planner";
 
 export interface Intent {
     raw: string;
@@ -18,16 +19,68 @@ export interface RouterContext {
 
     // Attached by the router after validation.
     approval?: Approval;
+
+    // Set only by the orchestrator (runLifecycle/daemon) to prove execution is plan-based.
+    execution?: {
+        planId: string;
+        stepId: string;
+    };
 }
 
 export type CapabilityFn = (ctx: RouterContext, input?: unknown) => Promise<unknown>;
 
 export interface Router {
     route(intent: Intent): CapabilityName | null;
+    executeStep(step: PlanStep, ctx: RouterContext, approval: StepApproval): Promise<unknown>;
+    // Legacy entrypoint: disabled unless ctx.execution is present.
     run(capability: CapabilityName, ctx: RouterContext, input?: unknown, approval?: Approval): Promise<unknown>;
 }
 
 export function createRouter(policy: Policy, capabilities: Record<CapabilityName, CapabilityFn>): Router {
+    async function runInternal(capability: CapabilityName, ctx: RouterContext, input?: unknown, approval?: Approval): Promise<unknown> {
+        // Block any direct execution that isn't explicitly marked as plan-based.
+        if (!ctx.execution) {
+            throw new Error("direct_execution_disabled");
+        }
+
+        if (!policy.isAllowed(capability)) {
+            throw new Error(`Policy blocked capability: ${capability}`);
+        }
+
+        const cfg = loadConfig(ctx.repoRoot);
+        const meta = getCapabilityMeta(capability);
+        if (!cfg.writeEnabled && !meta.readOnly) {
+            throw new Error("write_disabled");
+        }
+
+        // Governance lock: while locked, only allow minimal recovery/status operations.
+        const lock = readGovernanceLock(ctx.repoRoot);
+        if (lock.locked) {
+            const allowedWhileLocked: CapabilityName[] = ["memoryCheck", "governanceSelfTest", "governanceUnlock"];
+            if (!allowedWhileLocked.includes(capability)) {
+                throw new Error(`governance_locked: ${lock.reason ?? "(unset)"}`);
+            }
+        }
+
+        if (capabilityRequiresApproval(capability)) {
+            if (!isValidApproval(approval)) {
+                throw new ApprovalRequiredError(capability);
+            }
+
+            // Optional identity enforcement (parity with original governance).
+            const expected = cfg.governance.approverIdentity;
+            if (expected.trim().length > 0) {
+                const provided = approvalIdentity(approval);
+                if (!provided || provided.trim() !== expected.trim()) {
+                    throw new Error("no_authority");
+                }
+            }
+        }
+
+        const fn = capabilities[capability];
+        return fn({ ...ctx, approval }, input);
+    }
+
     return {
         route(intent: Intent): CapabilityName | null {
             const text = intent.raw.trim().toLowerCase();
@@ -62,42 +115,29 @@ export function createRouter(policy: Policy, capabilities: Record<CapabilityName
             return null;
         },
 
+        async executeStep(step: PlanStep, ctx: RouterContext, approval: StepApproval): Promise<unknown> {
+            if (!ctx.execution || ctx.execution.stepId !== step.id) {
+                throw new Error("direct_execution_disabled");
+            }
+            if (!isValidStepApproval(approval) || approval.stepId !== step.id) {
+                throw new ApprovalRequiredError(step.tool.name);
+            }
+
+            const meta = getCapabilityMeta(step.tool.name);
+
+            // Require APPLY for any non-readonly planned step.
+            if (!meta.readOnly) {
+                if (approval.confirm !== "APPLY") {
+                    throw new Error("confirm_required");
+                }
+            }
+
+            // Reuse the same governance policy enforcement as legacy run.
+            return runInternal(step.tool.name, ctx, step.input, approval);
+        },
+
         async run(capability: CapabilityName, ctx: RouterContext, input?: unknown, approval?: Approval): Promise<unknown> {
-            if (!policy.isAllowed(capability)) {
-                throw new Error(`Policy blocked capability: ${capability}`);
-            }
-
-            const cfg = loadConfig(ctx.repoRoot);
-            const meta = getCapabilityMeta(capability);
-            if (!cfg.writeEnabled && !meta.readOnly) {
-                throw new Error("write_disabled");
-            }
-
-            // Governance lock: while locked, only allow minimal recovery/status operations.
-            const lock = readGovernanceLock(ctx.repoRoot);
-            if (lock.locked) {
-                const allowedWhileLocked: CapabilityName[] = ["memoryCheck", "governanceSelfTest", "governanceUnlock"];
-                if (!allowedWhileLocked.includes(capability)) {
-                    throw new Error(`governance_locked: ${lock.reason ?? "(unset)"}`);
-                }
-            }
-
-            if (capabilityRequiresApproval(capability)) {
-                if (!isValidApproval(approval)) {
-                    throw new ApprovalRequiredError(capability);
-                }
-
-                // Optional identity enforcement (parity with original governance).
-                const expected = cfg.governance.approverIdentity;
-                if (expected.trim().length > 0) {
-                    const provided = approvalIdentity(approval);
-                    if (!provided || provided.trim() !== expected.trim()) {
-                        throw new Error("no_authority");
-                    }
-                }
-            }
-            const fn = capabilities[capability];
-            return fn({ ...ctx, approval }, input);
+            return runInternal(capability, ctx, input, approval);
         }
     };
 }

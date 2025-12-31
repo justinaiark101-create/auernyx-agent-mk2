@@ -79,38 +79,88 @@ export async function tryRunViaDaemon(
 ): Promise<DaemonRunResponse | null> {
     const { host, port } = getDaemonAddress(opts.repoRoot);
     const secret = getDaemonSecret(opts.repoRoot);
+    const headers = secret.trim().length > 0 ? { "x-auernyx-secret": secret } : undefined;
 
-    try {
-        const { status, json } = await requestJson(
+    const post = async (path: string, body: unknown) =>
+        requestJson(
             {
                 host,
                 port,
                 method: "POST",
-                path: "/run"
-                ,
-                headers: secret.trim().length > 0 ? { "x-auernyx-secret": secret } : undefined
+                path,
+                headers
             },
-            { intent, input, approval },
+            body,
             opts.timeoutMs ?? 1500
         );
 
-        if (typeof json !== "object" || json === null) return null;
-        const resp = json as Partial<DaemonRunResponse>;
+    try {
+        // Meta intents still go through /run.
+        const normalized = (intent ?? "").trim().toLowerCase();
+        const isMeta =
+            normalized === "ping" ||
+            normalized === "health" ||
+            normalized === "help" ||
+            normalized === "capabilities" ||
+            normalized === "list" ||
+            normalized === "status";
 
-        // Treat non-2xx as a real response (not "daemon missing")
-        if (status >= 400) {
+        if (isMeta) {
+            const { status, json } = await post("/run", { intent, input, approval });
+
+            if (typeof json !== "object" || json === null) return null;
+            const resp = json as Partial<DaemonRunResponse>;
+
+            if (status >= 400) {
+                return {
+                    ok: false,
+                    capability: typeof resp.capability === "string" ? resp.capability : undefined,
+                    error: typeof resp.error === "string" ? resp.error : `HTTP ${status}`
+                };
+            }
+
+            return {
+                ok: Boolean(resp.ok),
+                capability: typeof resp.capability === "string" ? resp.capability : undefined,
+                result: resp.result,
+                error: typeof resp.error === "string" ? resp.error : undefined
+            };
+        }
+
+        // Governed orchestrator loop: /plan -> /step.
+        const planResp = await post("/plan", { intent, input });
+        const planJson = planResp.json as any;
+        if (typeof planJson !== "object" || planJson === null) return null;
+
+        const plan = planJson?.result?.plan;
+        const capability = typeof planJson?.capability === "string" ? planJson.capability : undefined;
+
+        const firstStepId = typeof plan?.steps?.[0]?.id === "string" ? plan.steps[0].id : "step-1";
+
+        if (!approval) {
             return {
                 ok: false,
-                capability: typeof resp.capability === "string" ? resp.capability : undefined,
-                error: typeof resp.error === "string" ? resp.error : `HTTP ${status}`
+                capability,
+                error: "step_approval_required"
+            };
+        }
+
+        const stepResp = await post("/step", { intent, input, stepId: firstStepId, approval });
+        const stepJson = stepResp.json as any;
+
+        if (stepResp.status >= 400) {
+            return {
+                ok: false,
+                capability: typeof stepJson?.capability === "string" ? stepJson.capability : capability,
+                error: typeof stepJson?.error === "string" ? stepJson.error : `HTTP ${stepResp.status}`
             };
         }
 
         return {
-            ok: Boolean(resp.ok),
-            capability: typeof resp.capability === "string" ? resp.capability : undefined,
-            result: resp.result,
-            error: typeof resp.error === "string" ? resp.error : undefined
+            ok: Boolean(stepJson?.ok),
+            capability: typeof stepJson?.capability === "string" ? stepJson.capability : capability,
+            result: stepJson?.result,
+            error: typeof stepJson?.error === "string" ? stepJson.error : undefined
         };
     } catch {
         // Connection refused / timeout / no daemon.

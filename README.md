@@ -69,6 +69,28 @@ Notes:
 
 The browser UI is a control surface, not a privileged channel. All requests are subject to the same governance guard, write lock, approval friction, and refusal semantics as any other client.
 
+### Receipts API (read-only)
+
+If writes are enabled and a run produces a receipt, the daemon can serve receipt metadata and artifacts:
+
+- List receipts: `GET /receipts?limit=25`
+- List receipt files: `GET /receipts/<runId>`
+- Fetch receipt file: `GET /receipts/<runId>/<fileName>`
+
+Notes:
+
+- These endpoints require the daemon secret when one is configured.
+- Receipts are stored under `.auernyx/receipts/`.
+
+### Orchestrator API (plan → approve → execute)
+
+Mk2 runs capabilities through a governed orchestrator loop:
+
+- Plan: `POST /plan` with `{ intent, input }`
+- Execute step: `POST /step` with `{ intent, input, stepId, approval }`
+
+`POST /run` remains primarily for meta intents (e.g. `capabilities`, `status`) and for compatibility, but governed execution is enforced via the plan/step flow.
+
 ## Kintsugi governance storage (repo-local)
 
 Mk2 stores Kintsugi governance/audit artifacts under:

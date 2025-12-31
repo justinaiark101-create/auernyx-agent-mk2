@@ -28,6 +28,7 @@ import { skjoldrFirewallRestoreBaseline } from "../capabilities/skjoldrFirewallR
 import * as fs from "fs";
 import * as path from "path";
 import { getKintsugiPolicy, policyHash, verifyKintsugiIntegrity } from "./kintsugi/memory";
+import { runLifecycle } from "./runLifecycle";
 
 function daemonLockPathForRepo(repoRoot: string): string {
     const normalized = path.resolve(repoRoot).toLowerCase();
@@ -135,6 +136,8 @@ export interface DaemonRunRequest {
     intent: string;
     input?: unknown;
     approval?: unknown;
+    stepApprovals?: unknown;
+    evidence?: unknown;
 }
 
 export interface DaemonRunResponse {
@@ -230,6 +233,22 @@ function readJson(req: http.IncomingMessage, maxBodyBytes: number): Promise<unkn
     });
 }
 
+function isSafeReceiptSegment(seg: string): boolean {
+    if (!seg) return false;
+    if (seg === "." || seg === "..") return false;
+    if (seg.includes("\\") || seg.includes("/")) return false;
+    // Conservative allowlist: keep it URL/path safe and filesystem friendly.
+    return /^[A-Za-z0-9._-]{1,128}$/.test(seg);
+}
+
+function contentTypeForReceiptFile(name: string): string {
+    const lower = name.toLowerCase();
+    if (lower.endsWith(".json")) return "application/json; charset=utf-8";
+    if (lower.endsWith(".ndjson")) return "application/x-ndjson; charset=utf-8";
+    if (lower.endsWith(".sha256")) return "text/plain; charset=utf-8";
+    return "application/octet-stream";
+}
+
 function uiHtml(): string {
         return `<!doctype html>
 <html lang="en">
@@ -287,9 +306,57 @@ function uiHtml(): string {
 
         <div class="buttons">
             <button id="run">Run</button>
+            <button id="plan">Plan</button>
             <button id="capabilities">Capabilities</button>
             <button id="config">Config</button>
             <button id="ledger">Ledger (tail)</button>
+        </div>
+
+        <div class="hint">Plan/Step: Use Plan to generate a deterministic plan, then Execute Step with a per-step approval.</div>
+
+        <div class="row">
+            <label for="stepId">Step ID</label>
+            <input id="stepId" placeholder="e.g. step-1" />
+        </div>
+
+        <div class="buttons">
+            <button id="execStep">Execute Step</button>
+            <button id="approveExecStep1">Approve &amp; Execute Step-1</button>
+        </div>
+
+        <div class="row">
+            <label for="receiptLimit">Receipt limit</label>
+            <input id="receiptLimit" placeholder="25" />
+        </div>
+
+        <div class="row">
+            <label for="receiptRunId">Receipt runId</label>
+            <input id="receiptRunId" placeholder="e.g. 1735600000000-abcdef123456" />
+        </div>
+
+        <div class="row">
+            <label for="receiptFile">Receipt file</label>
+            <input id="receiptFile" placeholder="e.g. plan.json, result.json, events.ndjson" />
+        </div>
+
+        <div class="buttons">
+            <button id="receiptsList">Receipts (list)</button>
+            <button id="receiptsFiles">Receipt files</button>
+            <button id="receiptsFetch">Receipt file (fetch)</button>
+        </div>
+
+        <div class="hint">Run History: pick a receipt and load key artifacts.</div>
+
+        <div class="row">
+            <label for="historyRunId">History runId</label>
+            <select id="historyRunId"></select>
+        </div>
+
+        <div class="buttons">
+            <button id="historyRefresh">History (refresh)</button>
+            <button id="historyLoadPlan">History: plan.json</button>
+            <button id="historyLoadFinal">History: final.json</button>
+            <button id="historyLoadOutputs">History: outputs.json</button>
         </div>
 
         <pre id="out">Ready.</pre>
@@ -303,9 +370,44 @@ function uiHtml(): string {
             const reasonEl = el('approvalReason');
             const identEl = el('approvalIdentity');
             const confirmEl = el('approvalConfirm');
+            const stepIdEl = el('stepId');
+            const receiptLimitEl = el('receiptLimit');
+            const receiptRunIdEl = el('receiptRunId');
+            const receiptFileEl = el('receiptFile');
+            const historyRunIdEl = el('historyRunId');
+
+            let lastPlannedPlan = null;
 
             secretEl.value = localStorage.getItem('auernyx.secret') || '';
             secretEl.addEventListener('input', () => localStorage.setItem('auernyx.secret', secretEl.value));
+
+            receiptLimitEl.value = localStorage.getItem('auernyx.receiptLimit') || '25';
+            receiptLimitEl.addEventListener('input', () => localStorage.setItem('auernyx.receiptLimit', receiptLimitEl.value));
+
+            receiptRunIdEl.value = localStorage.getItem('auernyx.receiptRunId') || '';
+            receiptRunIdEl.addEventListener('input', () => localStorage.setItem('auernyx.receiptRunId', receiptRunIdEl.value));
+
+            receiptFileEl.value = localStorage.getItem('auernyx.receiptFile') || '';
+            receiptFileEl.addEventListener('input', () => localStorage.setItem('auernyx.receiptFile', receiptFileEl.value));
+
+            stepIdEl.value = localStorage.getItem('auernyx.stepId') || 'step-1';
+            stepIdEl.addEventListener('input', () => localStorage.setItem('auernyx.stepId', stepIdEl.value));
+
+            historyRunIdEl.addEventListener('change', () => localStorage.setItem('auernyx.historyRunId', historyRunIdEl.value));
+
+            function setHistoryOptions(runIds) {
+                while (historyRunIdEl.firstChild) historyRunIdEl.removeChild(historyRunIdEl.firstChild);
+                for (const r of runIds) {
+                    const opt = document.createElement('option');
+                    opt.value = r;
+                    opt.textContent = r;
+                    historyRunIdEl.appendChild(opt);
+                }
+
+                const saved = localStorage.getItem('auernyx.historyRunId') || '';
+                if (saved && runIds.includes(saved)) historyRunIdEl.value = saved;
+                if (!historyRunIdEl.value && runIds.length) historyRunIdEl.value = runIds[0];
+            }
 
             function setOut(obj) {
                 out.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
@@ -319,12 +421,51 @@ function uiHtml(): string {
                 const confirm = (confirmEl.value || '').trim();
 
                 return {
-                    kind: 'human',
-                    ts: new Date().toISOString(),
+                    approvedBy: 'human',
+                    at: new Date().toISOString(),
                     reason,
                     identity: identity || undefined,
                     confirm: confirm || undefined
                 };
+            }
+
+            function extractFirstStep(planRespJson) {
+                const plan = planRespJson && planRespJson.result ? planRespJson.result.plan : null;
+                const step0 = plan && Array.isArray(plan.steps) ? plan.steps[0] : null;
+                const stepId = step0 && typeof step0.id === 'string' ? step0.id : null;
+                const stepType = step0 && typeof step0.type === 'string' ? step0.type : null;
+                const requiresApply = stepType && stepType !== 'READ_ONLY';
+                return { plan, step0, stepId, stepType, requiresApply };
+            }
+
+            function rememberPlan(planRespJson) {
+                const plan = planRespJson && planRespJson.result ? planRespJson.result.plan : null;
+                if (plan && Array.isArray(plan.steps)) {
+                    lastPlannedPlan = plan;
+                }
+            }
+
+            function findStepTypeInLastPlan(stepId) {
+                if (!lastPlannedPlan || !Array.isArray(lastPlannedPlan.steps)) return null;
+                const step = lastPlannedPlan.steps.find((s) => s && typeof s.id === 'string' && s.id === stepId);
+                return step && typeof step.type === 'string' ? step.type : null;
+            }
+
+            async function getConfig() {
+                const resp = await getJson('/config');
+                return resp;
+            }
+
+            async function ensureIdentityIfConfigured() {
+                const cfgResp = await getConfig();
+                const expected = cfgResp && cfgResp.json && cfgResp.json.result && cfgResp.json.result.governance
+                    ? (cfgResp.json.result.governance.approverIdentity || '')
+                    : '';
+                const needsIdentity = typeof expected === 'string' && expected.trim().length > 0;
+                if (!needsIdentity) return { ok: true };
+                const provided = (identEl.value || '').trim();
+                if (!provided) return { ok: false, error: 'Approver identity is required by governance config.' };
+                return { ok: true };
             }
 
             function buildInput() {
@@ -346,6 +487,32 @@ function uiHtml(): string {
                 return { status: res.status, json };
             }
 
+            async function postPlan(intent, input) {
+                const secret = (secretEl.value || '').trim();
+                const headers = { 'content-type': 'application/json' };
+                if (secret) headers['x-auernyx-secret'] = secret;
+                const res = await fetch('/plan', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ intent, input })
+                });
+                const json = await res.json().catch(() => ({ ok: false, error: 'bad_json_response' }));
+                return { status: res.status, json };
+            }
+
+            async function postStep(intent, input, stepId, approval) {
+                const secret = (secretEl.value || '').trim();
+                const headers = { 'content-type': 'application/json' };
+                if (secret) headers['x-auernyx-secret'] = secret;
+                const res = await fetch('/step', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ intent, input, stepId, approval })
+                });
+                const json = await res.json().catch(() => ({ ok: false, error: 'bad_json_response' }));
+                return { status: res.status, json };
+            }
+
             async function getJson(url) {
                 const secret = (secretEl.value || '').trim();
                 const headers = {};
@@ -355,14 +522,149 @@ function uiHtml(): string {
                 return { status: res.status, json };
             }
 
+            async function getText(url) {
+                const secret = (secretEl.value || '').trim();
+                const headers = {};
+                if (secret) headers['x-auernyx-secret'] = secret;
+                const res = await fetch(url, { headers });
+                const text = await res.text().catch(() => '');
+                return { status: res.status, text };
+            }
+
+            async function refreshHistory() {
+                const rawLimit = (receiptLimitEl.value || '').trim();
+                const limit = rawLimit ? Number(rawLimit) : 25;
+                const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(200, limit)) : 25;
+                const resp = await getJson('/receipts?limit=' + safeLimit);
+                const receipts = resp && resp.json ? resp.json.receipts : null;
+                const runIds = Array.isArray(receipts)
+                    ? receipts.map((r) => (r && typeof r.runId === 'string' ? r.runId : null)).filter(Boolean)
+                    : [];
+                setHistoryOptions(runIds);
+                return resp;
+            }
+
+            async function loadHistoryFile(fileName) {
+                const runId = (historyRunIdEl.value || '').trim();
+                if (!runId) return setOut('No history runId selected.');
+                const resp = await getText('/receipts/' + encodeURIComponent(runId) + '/' + encodeURIComponent(fileName));
+                if (fileName.endsWith('.json')) {
+                    try {
+                        const parsed = JSON.parse(resp.text);
+                        return setOut({ status: resp.status, runId, file: fileName, json: parsed });
+                    } catch {
+                        return setOut({ status: resp.status, runId, file: fileName, text: resp.text });
+                    }
+                }
+                return setOut({ status: resp.status, runId, file: fileName, text: resp.text });
+            }
+
             el('run').addEventListener('click', async () => {
                 try {
                     const intent = (intentEl.value || '').trim();
                     if (!intent) return setOut('Missing intent.');
                     const input = buildInput();
                     const approval = buildApproval();
-                    const resp = await postRun(intent, input, approval);
+                    if (!approval) return setOut('Missing approval reason.');
+
+                    const idCheck = await ensureIdentityIfConfigured();
+                    if (!idCheck.ok) return setOut(idCheck.error);
+
+                    const planResp = await postPlan(intent, input);
+                    if (!planResp || !planResp.json || !planResp.json.ok) {
+                        return setOut({ plan: planResp });
+                    }
+
+                    rememberPlan(planResp.json);
+
+                    const extracted = extractFirstStep(planResp.json);
+                    if (extracted.stepId) stepIdEl.value = extracted.stepId;
+                    if (extracted.requiresApply) confirmEl.value = 'APPLY';
+
+                    const stepId = (stepIdEl.value || '').trim() || 'step-1';
+                    const stepResp = await postStep(intent, input, stepId, approval);
+                    setOut({ plan: planResp, step: stepResp });
+                } catch (e) {
+                    setOut(String(e && e.message ? e.message : e));
+                }
+            });
+
+            el('plan').addEventListener('click', async () => {
+                try {
+                    const intent = (intentEl.value || '').trim();
+                    if (!intent) return setOut('Missing intent.');
+                    const input = buildInput();
+                    const resp = await postPlan(intent, input);
+                    if (resp && resp.json && resp.json.ok) {
+                        rememberPlan(resp.json);
+                        const extracted = extractFirstStep(resp.json);
+                        if (extracted.stepId) stepIdEl.value = extracted.stepId;
+                        if (extracted.requiresApply) confirmEl.value = 'APPLY';
+                    }
                     setOut(resp);
+                } catch (e) {
+                    setOut(String(e && e.message ? e.message : e));
+                }
+            });
+
+            el('execStep').addEventListener('click', async () => {
+                try {
+                    const intent = (intentEl.value || '').trim();
+                    if (!intent) return setOut('Missing intent.');
+                    const stepId = (stepIdEl.value || '').trim();
+                    if (!stepId) return setOut('Missing stepId.');
+                    const input = buildInput();
+
+                    const inferredType = findStepTypeInLastPlan(stepId);
+                    if (inferredType && inferredType !== 'READ_ONLY') {
+                        confirmEl.value = 'APPLY';
+                    }
+                    const approval = buildApproval();
+                    if (!approval) return setOut('Missing approval reason.');
+
+                    const idCheck = await ensureIdentityIfConfigured();
+                    if (!idCheck.ok) return setOut(idCheck.error);
+
+                    // Step execution requires APPLY for non-readonly operations.
+                    const resp = await postStep(intent, input, stepId, approval);
+                    setOut(resp);
+                } catch (e) {
+                    setOut(String(e && e.message ? e.message : e));
+                }
+            });
+
+            el('approveExecStep1').addEventListener('click', async () => {
+                try {
+                    const intent = (intentEl.value || '').trim();
+                    if (!intent) return setOut('Missing intent.');
+                    const input = buildInput();
+
+                    const approval = buildApproval();
+                    if (!approval) return setOut('Missing approval reason.');
+
+                    const idCheck = await ensureIdentityIfConfigured();
+                    if (!idCheck.ok) return setOut(idCheck.error);
+
+                    const planResp = await postPlan(intent, input);
+                    if (!planResp || !planResp.json || !planResp.json.ok) {
+                        return setOut({ plan: planResp });
+                    }
+
+                    rememberPlan(planResp.json);
+
+                    const extracted = extractFirstStep(planResp.json);
+                    const stepId = extracted.stepId || 'step-1';
+                    stepIdEl.value = stepId;
+
+                    if (extracted.requiresApply) {
+                        confirmEl.value = 'APPLY';
+                    }
+
+                    const approval2 = buildApproval();
+                    if (!approval2) return setOut('Missing approval reason.');
+
+                    const stepResp = await postStep(intent, input, stepId, approval2);
+                    setOut({ plan: planResp, step: stepResp });
                 } catch (e) {
                     setOut(String(e && e.message ? e.message : e));
                 }
@@ -382,6 +684,42 @@ function uiHtml(): string {
                 const resp = await getJson('/ledger?tail=50');
                 setOut(resp);
             });
+
+            el('receiptsList').addEventListener('click', async () => {
+                const rawLimit = (receiptLimitEl.value || '').trim();
+                const limit = rawLimit ? Number(rawLimit) : 25;
+                const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(200, limit)) : 25;
+                const resp = await getJson('/receipts?limit=' + safeLimit);
+                setOut(resp);
+            });
+
+            el('receiptsFiles').addEventListener('click', async () => {
+                const runId = (receiptRunIdEl.value || '').trim();
+                if (!runId) return setOut('Missing receipt runId.');
+                const resp = await getJson('/receipts/' + encodeURIComponent(runId));
+                setOut(resp);
+            });
+
+            el('receiptsFetch').addEventListener('click', async () => {
+                const runId = (receiptRunIdEl.value || '').trim();
+                const file = (receiptFileEl.value || '').trim();
+                if (!runId) return setOut('Missing receipt runId.');
+                if (!file) return setOut('Missing receipt file name.');
+                const resp = await getText('/receipts/' + encodeURIComponent(runId) + '/' + encodeURIComponent(file));
+                setOut(resp);
+            });
+
+            el('historyRefresh').addEventListener('click', async () => {
+                const resp = await refreshHistory();
+                setOut(resp);
+            });
+
+            el('historyLoadPlan').addEventListener('click', async () => loadHistoryFile('plan.json'));
+            el('historyLoadFinal').addEventListener('click', async () => loadHistoryFile('final.json'));
+            el('historyLoadOutputs').addEventListener('click', async () => loadHistoryFile('outputs.json'));
+
+            // Best-effort initial history population.
+            refreshHistory().catch(() => void 0);
         </script>
     </body>
 </html>`;
@@ -569,6 +907,93 @@ export function startDaemon(repoRoot: string) {
             return writeJson(res, 200, { ok: true, result: redact(effective) } satisfies DaemonRunResponse);
         }
 
+        if (req.method === "GET" && req.url.startsWith("/receipts")) {
+            if (!checkRateLimit(req, res)) return;
+            if (!requireSecretIfConfigured(req, res, secret)) return;
+
+            const url = new URL(req.url, `http://${host}:${port}`);
+            const segments = url.pathname.split("/").filter(Boolean);
+            // segments[0] === "receipts"
+            const baseDir = path.join(repoRoot, ".auernyx", "receipts");
+
+            if (segments.length === 1) {
+                const limit = toInt(url.searchParams.get("limit"), 25);
+                if (!fs.existsSync(baseDir)) {
+                    return writeJson(res, 200, { ok: true, count: 0, receipts: [] });
+                }
+
+                const entries = fs
+                    .readdirSync(baseDir, { withFileTypes: true })
+                    .filter((d) => d.isDirectory() && isSafeReceiptSegment(d.name))
+                    .map((d) => {
+                        const dirPath = path.join(baseDir, d.name);
+                        let mtimeMs = 0;
+                        try {
+                            mtimeMs = fs.statSync(dirPath).mtimeMs;
+                        } catch {
+                            // ignore
+                        }
+                        return { runId: d.name, mtimeMs };
+                    })
+                    .sort((a, b) => b.mtimeMs - a.mtimeMs)
+                    .slice(0, Math.max(1, Math.min(200, limit)));
+
+                return writeJson(res, 200, { ok: true, count: entries.length, receipts: entries });
+            }
+
+            const runId = segments[1] ?? "";
+            if (!isSafeReceiptSegment(runId)) {
+                return writeJson(res, 400, { ok: false, error: "invalid_receipt_id" } satisfies DaemonRunResponse);
+            }
+
+            const runDir = path.join(baseDir, runId);
+            if (!fs.existsSync(runDir) || !fs.statSync(runDir).isDirectory()) {
+                return writeJson(res, 404, { ok: false, error: "receipt_not_found" } satisfies DaemonRunResponse);
+            }
+
+            if (segments.length === 2) {
+                const files = fs
+                    .readdirSync(runDir, { withFileTypes: true })
+                    .filter((d) => d.isFile() && isSafeReceiptSegment(d.name))
+                    .map((d) => d.name)
+                    .sort();
+                return writeJson(res, 200, { ok: true, runId, files });
+            }
+
+            if (segments.length === 3) {
+                const fileName = segments[2] ?? "";
+                if (!isSafeReceiptSegment(fileName)) {
+                    return writeJson(res, 400, { ok: false, error: "invalid_receipt_file" } satisfies DaemonRunResponse);
+                }
+
+                const filePath = path.join(runDir, fileName);
+                let st: fs.Stats;
+                try {
+                    st = fs.statSync(filePath);
+                } catch {
+                    return writeJson(res, 404, { ok: false, error: "receipt_file_not_found" } satisfies DaemonRunResponse);
+                }
+                if (!st.isFile()) {
+                    return writeJson(res, 404, { ok: false, error: "receipt_file_not_found" } satisfies DaemonRunResponse);
+                }
+
+                const maxBytes = 2 * 1024 * 1024;
+                if (st.size > maxBytes) {
+                    return writeJson(res, 413, { ok: false, error: "receipt_file_too_large" } satisfies DaemonRunResponse);
+                }
+
+                const body = fs.readFileSync(filePath);
+                res.writeHead(200, {
+                    "content-type": contentTypeForReceiptFile(fileName),
+                    "content-length": body.length
+                });
+                res.end(body);
+                return;
+            }
+
+            return writeJson(res, 404, { ok: false, error: "not found" } satisfies DaemonRunResponse);
+        }
+
         if (req.method === "POST" && req.url === "/run") {
             try {
                 if (!checkRateLimit(req, res)) return;
@@ -589,45 +1014,52 @@ export function startDaemon(repoRoot: string) {
                     return writeJson(res, 200, { ok: true, result } satisfies DaemonRunResponse);
                 }
 
-                const capability = core.router.route({ raw: intent });
-                if (!capability) {
-                    core.ledger.append(core.sessionId, "daemon.unroutable", { intent });
-                    return writeJson(
-                        res,
-                        422,
-                        {
-                            ok: false,
-                            error: "unroutable intent",
-                            hints: {
-                                health: "GET /health",
-                                metaIntents: ["ping", "health", "help", "capabilities"],
-                                routableExamples: [
-                                    "scan",
-                                    "scan <path>",
-                                    "feneris",
-                                    "baseline pre",
-                                    "baseline post",
-                                    "memory",
-                                    "governance self-test",
-                                    "governance unlock",
-                                    "rollback known good",
-                                    "skjoldr status",
-                                    "docker"
-                                ]
-                            }
-                        } satisfies DaemonRunResponse
-                    );
+                const approval = isValidApproval(body.approval) ? body.approval : undefined;
+                const stepApprovals = Array.isArray(body.stepApprovals) ? (body.stepApprovals as any) : undefined;
+                const evidence = Array.isArray(body.evidence) ? (body.evidence as any) : undefined;
+                const lifecycle = await runLifecycle({
+                    router: core.router,
+                    ctx: { repoRoot, sessionId: core.sessionId, ledger: core.ledger },
+                    intent,
+                    input: body.input,
+                    approval,
+                    stepApprovals,
+                    evidence,
+                });
+
+                if (!lifecycle.ok) {
+                    core.ledger.append(core.sessionId, "daemon.refusal", {
+                        intent,
+                        capability: lifecycle.capability,
+                        refusal: lifecycle.refusal,
+                        receipt: lifecycle.receipt,
+                    });
+
+                    const status = lifecycle.refusal?.code === "step_approval_required" ? 428 : 422;
+                    return writeJson(res, status, {
+                        ok: false,
+                        capability: lifecycle.capability,
+                        error: lifecycle.refusal?.code ?? (lifecycle.refusal?.reason ?? "refused"),
+                        hints: {
+                            ...lifecycle.refusal,
+                            plan: lifecycle.plan,
+                            missingStepIds: lifecycle.missingStepIds,
+                            receipt: lifecycle.receipt,
+                        },
+                    } satisfies DaemonRunResponse);
                 }
 
-                const approval = isValidApproval(body.approval) ? body.approval : undefined;
-                const result = await core.router.run(
-                    capability,
-                    { repoRoot, sessionId: core.sessionId, ledger: core.ledger },
-                    body.input,
-                    approval
-                );
-                core.ledger.append(core.sessionId, "daemon.run", { intent, capability, result });
-                return writeJson(res, 200, { ok: true, capability, result } satisfies DaemonRunResponse);
+                core.ledger.append(core.sessionId, "daemon.run", {
+                    intent,
+                    capability: lifecycle.capability,
+                    receipt: lifecycle.receipt,
+                });
+
+                return writeJson(res, 200, {
+                    ok: true,
+                    capability: lifecycle.capability,
+                    result: lifecycle.result,
+                } satisfies DaemonRunResponse);
             } catch (err) {
                 if (err instanceof Error && err.message === "payload_too_large") {
                     return writeJson(res, 413, { ok: false, error: "payload_too_large" } satisfies DaemonRunResponse);
@@ -638,6 +1070,106 @@ export function startDaemon(repoRoot: string) {
                 }
                 const msg = err instanceof Error ? err.message : String(err);
                 core.ledger.append(core.sessionId, "daemon.error", { error: msg });
+                return writeJson(res, 500, { ok: false, error: msg } satisfies DaemonRunResponse);
+            }
+        }
+
+        if (req.method === "POST" && req.url === "/plan") {
+            try {
+                if (!checkRateLimit(req, res)) return;
+                if (!requireSecretIfConfigured(req, res, secret)) return;
+
+                const body = (await readJson(req, maxBodyBytes)) as Partial<DaemonRunRequest>;
+                const intent = typeof body.intent === "string" ? body.intent : "";
+                if (!intent.trim()) {
+                    return writeJson(res, 400, { ok: false, error: "missing intent" } satisfies DaemonRunResponse);
+                }
+
+                const lifecycle = await runLifecycle({
+                    router: core.router,
+                    ctx: { repoRoot, sessionId: core.sessionId, ledger: core.ledger },
+                    intent,
+                    input: body.input,
+                    // No approvals: force plan-only response.
+                    stepApprovals: [],
+                    evidence: Array.isArray(body.evidence) ? (body.evidence as any) : undefined,
+                });
+
+                // runLifecycle returns step_approval_required when approvals are missing; that is expected for /plan.
+                if (lifecycle.plan) {
+                    return writeJson(res, 200, {
+                        ok: true,
+                        capability: lifecycle.capability,
+                        result: {
+                            plan: lifecycle.plan,
+                            missingStepIds: lifecycle.missingStepIds ?? [],
+                            receipt: lifecycle.receipt,
+                        }
+                    } satisfies DaemonRunResponse);
+                }
+
+                return writeJson(res, 422, {
+                    ok: false,
+                    error: lifecycle.refusal?.code ?? (lifecycle.refusal?.reason ?? "refused"),
+                    hints: lifecycle.refusal,
+                } satisfies DaemonRunResponse);
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                return writeJson(res, 500, { ok: false, error: msg } satisfies DaemonRunResponse);
+            }
+        }
+
+        if (req.method === "POST" && req.url === "/step") {
+            try {
+                if (!checkRateLimit(req, res)) return;
+                if (!requireSecretIfConfigured(req, res, secret)) return;
+
+                const body = (await readJson(req, maxBodyBytes)) as any;
+                const intent = typeof body.intent === "string" ? body.intent : "";
+                const stepId = typeof body.stepId === "string" ? body.stepId : "";
+                if (!intent.trim()) return writeJson(res, 400, { ok: false, error: "missing intent" } satisfies DaemonRunResponse);
+                if (!stepId.trim()) return writeJson(res, 400, { ok: false, error: "missing stepId" } satisfies DaemonRunResponse);
+
+                const approval = body.approval;
+                const evidence = Array.isArray(body.evidence) ? body.evidence : undefined;
+
+                // Execute by providing a single step approval; runLifecycle will enforce plan-based execution.
+                const evidenceRefs = Array.isArray((approval as any)?.evidenceRefs) ? ((approval as any).evidenceRefs as unknown[]) : undefined;
+                const approvalForStep = isValidApproval(approval)
+                    ? [{ ...(approval as any), stepId, evidenceRefs: evidenceRefs?.filter((v) => typeof v === "string" && v.trim().length > 0) }]
+                    : [];
+
+                const lifecycle = await runLifecycle({
+                    router: core.router,
+                    ctx: { repoRoot, sessionId: core.sessionId, ledger: core.ledger },
+                    intent,
+                    input: body.input,
+                    stepApprovals: approvalForStep,
+                    evidence,
+                });
+
+                if (!lifecycle.ok) {
+                    const status = lifecycle.refusal?.code === "step_approval_required" ? 428 : 422;
+                    return writeJson(res, status, {
+                        ok: false,
+                        capability: lifecycle.capability,
+                        error: lifecycle.refusal?.code ?? (lifecycle.refusal?.reason ?? "refused"),
+                        hints: {
+                            ...lifecycle.refusal,
+                            plan: lifecycle.plan,
+                            missingStepIds: lifecycle.missingStepIds,
+                            receipt: lifecycle.receipt,
+                        },
+                    } satisfies DaemonRunResponse);
+                }
+
+                return writeJson(res, 200, {
+                    ok: true,
+                    capability: lifecycle.capability,
+                    result: { outputs: lifecycle.result, receipt: lifecycle.receipt, plan: lifecycle.plan },
+                } satisfies DaemonRunResponse);
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
                 return writeJson(res, 500, { ok: false, error: msg } satisfies DaemonRunResponse);
             }
         }
