@@ -6,6 +6,16 @@
     "fenerisPrep",
     "baselinePre",
     "baselinePost",
+    "memoryCheck",
+    "proposeFixes",
+    "governanceSelfTest",
+    "governanceUnlock",
+    "rollbackKnownGood",
+    "skjoldrFirewallStatus",
+    "skjoldrFirewallApplyProfile",
+    "skjoldrFirewallApplyRulesetFile",
+    "skjoldrFirewallExportBaseline",
+    "skjoldrFirewallRestoreBaseline",
     "docker"
   ]
 }
