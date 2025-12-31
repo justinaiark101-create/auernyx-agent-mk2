@@ -2,21 +2,18 @@
   "name": "auernyx-agent",
   "displayName": "Auernyx Agent",
   "description": "Embedded assistant persona for guidance, analysis, and tooling inside VS Code.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.85.0"
   },
   "main": "./dist/clients/vscode/extension.js",
-
   "activationEvents": [
     "onStartupFinished"
   ],
-
   "bin": {
     "auernyx": "./dist/clients/cli/auernyx.js",
     "auernyx-daemon": "./dist/clients/cli/auernyx-daemon.js"
   },
-
   "contributes": {
     "commands": [
       {
