@@ -156,12 +156,51 @@ export async function runLifecycle(args: {
             approvals.push({ ...args.approval, stepId });
         }
     }
+    const planStepIds = new Set(plan.steps.map((s) => s.id));
+    const unknownApprovalStepIds = new Set<string>();
+    const duplicateApprovalStepIds = new Set<string>();
+
     const byStepId = new Map<string, StepApproval>();
     for (const a of approvals) {
         if (!a || typeof a.stepId !== "string") continue;
         const sid = a.stepId.trim();
         if (!sid) continue;
+
+        if (!planStepIds.has(sid)) {
+            unknownApprovalStepIds.add(sid);
+            continue;
+        }
+
+        if (byStepId.has(sid)) {
+            duplicateApprovalStepIds.add(sid);
+        }
+
+        // Keep last-write-wins, but normalize stepId.
         byStepId.set(sid, { ...a, stepId: sid });
+    }
+
+    if (unknownApprovalStepIds.size > 0) {
+        const unknown = Array.from(unknownApprovalStepIds).sort();
+        receipt?.appendEvent("approval.unknown_step", { unknownStepIds: unknown, knownStepIds: Array.from(planStepIds).sort() });
+        receipt?.writeJson("final.json", {
+            ok: false,
+            status: "REFUSED",
+            stage: "approval",
+            planId: (plan as any).planId,
+            refusal: { code: "unknown_step_approval", reason: `Approval references unknown stepId(s): ${unknown.join(", ")}` }
+        });
+        const finalized = receipt?.finalize();
+        return {
+            ok: false,
+            capability: plan.steps[0]?.tool?.name,
+            plan,
+            refusal: { code: "unknown_step_approval", reason: `Approval references unknown stepId(s): ${unknown.join(", ")}` },
+            ...(finalized ? { receipt: finalized } : {})
+        };
+    }
+
+    if (duplicateApprovalStepIds.size > 0) {
+        receipt?.appendEvent("approval.duplicate", { stepIds: Array.from(duplicateApprovalStepIds).sort(), policy: "last_write_wins" });
     }
 
     const outputs: unknown[] = [];
