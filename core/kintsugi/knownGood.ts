@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
-import { getApproverIdentity, getLastLedgerRecord, makeSnapshotHash } from "./memory";
+import { getApproverIdentity, getLastLedgerRecord, makeMfr, makeSnapshotHash, recordFailure } from "./memory";
 
 const KINTSUGI_DIR = path.join(".auernyx", "kintsugi");
 const ENTRIES_DIR = path.join(KINTSUGI_DIR, "known_good", "entries");
@@ -88,10 +88,44 @@ export async function recordKnownGoodSnapshot(
     const base = path.join(repoRoot, ENTRIES_DIR);
     fs.mkdirSync(base, { recursive: true });
 
-    const head = await getLastLedgerRecord(repoRoot);
-    const ledgerHeadHash = String((head as any)?.record_hash ?? "");
+    // Ensure the ledger has at least one record so we can anchor known-good snapshots.
+    // Fresh repos may have policy initialized without any ledger entries yet.
+    let head = await getLastLedgerRecord(repoRoot);
+    let ledgerHeadHash = String((head as any)?.record_hash ?? "");
     if (!ledgerHeadHash) {
-        throw new Error("Cannot mark Known Good: ledger head hash unavailable");
+        const approvedBy = params.approvedBy ?? getApproverIdentity(repoRoot);
+        await recordFailure(repoRoot, {
+            ...makeMfr({
+                system: "kintsugi:known-good",
+                failure_type: "governance",
+                trigger: "Initialize ledger anchor for known-good snapshot",
+                inputs_snapshot: makeSnapshotHash({
+                    policy_snapshot_path: params.policySnapshotPath,
+                    policy_hash: params.policyHash,
+                    reason: params.reason,
+                }),
+                pre_state: params.policyHash,
+                post_state: params.policyHash,
+                recovery_action: "none",
+                authorized_by: approvedBy,
+                notes: "Genesis ledger record to anchor known-good snapshots.",
+            }),
+            severity: "LOW",
+            normalized_error_code: "KINTSUGI_KNOWN_GOOD_ANCHOR",
+            signature: "governance::kintsugi:known-good::anchor::KINTSUGI_KNOWN_GOOD_ANCHOR",
+            approved_by: approvedBy,
+            approval_timestamp: new Date().toISOString(),
+            risk_level: "SAFE",
+            blast_radius: ["kintsugi-ledger"],
+            baseline_snapshot_path: params.policySnapshotPath,
+            baseline_snapshot_hash: params.policyHash,
+        }).catch(() => undefined);
+
+        head = await getLastLedgerRecord(repoRoot);
+        ledgerHeadHash = String((head as any)?.record_hash ?? "");
+        if (!ledgerHeadHash) {
+            throw new Error("Cannot mark Known Good: ledger head hash unavailable");
+        }
     }
 
     const approvedBy = params.approvedBy ?? getApproverIdentity(repoRoot);

@@ -140,15 +140,24 @@ export async function runLifecycle(args: {
     }
 
     // Execute the plan steps. (Planner may emit N steps.)
+    // If a legacy approval is provided, only map it for single-step execution.
+    // This keeps the invariants: every executed step has an explicit StepApproval.
+    const requestedStepId = typeof args.executeStepId === "string" ? args.executeStepId.trim() : "";
     const approvals = Array.isArray(args.stepApprovals) ? args.stepApprovals : [];
+    if (approvals.length === 0 && args.approval) {
+        const stepId = requestedStepId || plan.steps[0]?.id;
+        const isSingleStepPlan = plan.steps.length === 1;
+        const isSingleRequestedStep = Boolean(requestedStepId);
+        if (stepId && (isSingleStepPlan || isSingleRequestedStep)) {
+            approvals.push({ ...args.approval, stepId });
+        }
+    }
     const byStepId = new Map<string, StepApproval>();
     for (const a of approvals) {
         if (a && typeof a.stepId === "string") byStepId.set(a.stepId, a);
     }
 
     const outputs: unknown[] = [];
-
-    const requestedStepId = typeof args.executeStepId === "string" ? args.executeStepId.trim() : "";
     const stepIds = plan.steps.map((s) => s.id);
     const requestedIndex = requestedStepId ? stepIds.indexOf(requestedStepId) : -1;
     if (requestedStepId && requestedIndex < 0) {

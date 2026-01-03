@@ -3,7 +3,7 @@
 import { createCore } from "../../core/server";
 import { tryRunViaDaemon } from "../../core/daemonClient";
 import { createHumanApproval } from "../../core/approvals";
-import { capabilityRequiresApproval, CapabilityName } from "../../core/policy";
+import { capabilityRequiresApproval, CapabilityName, getCapabilityMeta } from "../../core/policy";
 import { runLifecycle } from "../../core/runLifecycle";
 import { loadConfig } from "../../core/config";
 import * as readline from "readline";
@@ -53,7 +53,12 @@ function usageAndExit(): never {
             "  auernyx skjoldr apply-profile <NAME>",
             "  auernyx skjoldr apply-ruleset <FILE>",
             "  auernyx skjoldr export-baseline",
-            "  auernyx skjoldr restore-baseline [--snapshot <FILE>] [--hash <SHA256>]"
+            "  auernyx skjoldr restore-baseline [--snapshot <FILE>] [--hash <SHA256>]",
+            "",
+            "Non-interactive approvals:",
+            "  --reason <TEXT>         Approval reason (skips prompts)",
+            "  --identity <TEXT>       Approver identity (when required)",
+            "  --confirm APPLY         Required for mutating operations"
         ].join("\n")
     );
     process.exit(1);
@@ -75,6 +80,24 @@ function parseStringFlag(argv: string[], name: string): string | undefined {
     return typeof raw === "string" ? raw : undefined;
 }
 
+function parseApprovalFlags(argv: string[]): {
+    nonInteractive: boolean;
+    reason?: string;
+    identity?: string;
+    confirm?: "APPLY";
+} {
+    const reason = parseStringFlag(argv, "--reason") ?? parseStringFlag(argv, "--approve-reason");
+    const identity = parseStringFlag(argv, "--identity");
+    const confirmRaw = parseStringFlag(argv, "--confirm");
+    const confirm = confirmRaw === "APPLY" ? "APPLY" : undefined;
+    return {
+        nonInteractive: typeof reason === "string" && reason.trim().length > 0,
+        reason: typeof reason === "string" ? reason.trim() : undefined,
+        identity: typeof identity === "string" ? identity.trim() : undefined,
+        confirm
+    };
+}
+
 function buildStructuredInput(argv: string[]): { daemonInput: unknown; daemonIntent: string; controlled: boolean } {
     if (argv.length === 0) usageAndExit();
 
@@ -86,7 +109,8 @@ function buildStructuredInput(argv: string[]): { daemonInput: unknown; daemonInt
     let controlled = false;
 
     if (primary === "scan") {
-        if (typeof argv[1] === "string") daemonInput = { targetDir: argv[1] };
+        const target = typeof argv[1] === "string" && !argv[1].startsWith("--") ? argv[1] : undefined;
+        if (typeof target === "string") daemonInput = { targetDir: target };
         return { daemonInput, daemonIntent, controlled };
     }
 
@@ -211,6 +235,8 @@ async function main() {
     const argv = process.argv.slice(2);
     const raw = argv.join(" ").trim();
 
+    const approvalFlags = parseApprovalFlags(argv);
+
     if (!raw) {
         // eslint-disable-next-line no-console
         console.error("Usage: auernyx <intent>");
@@ -230,14 +256,17 @@ async function main() {
     if (daemonResp !== null) {
         if (!daemonResp.ok && daemonResp.error === "approval_required") {
             const cap = daemonResp.capability ?? "capability";
-            const reason = await promptApproval(cap);
+            const reason = approvalFlags.nonInteractive ? approvalFlags.reason! : await promptApproval(cap);
             if (!reason) process.exit(4);
+
             const identity = identityRequired
-                ? (await promptText(`Approver identity required. Type identity (expected: ${cfg.governance.approverIdentity}): `))
+                ? (approvalFlags.nonInteractive ? approvalFlags.identity : await promptText(`Approver identity required. Type identity (expected: ${cfg.governance.approverIdentity}): `))
                 : null;
             if (identityRequired && (!identity || identity.trim().length === 0)) process.exit(4);
 
-            const confirm = controlled ? (await promptText("Controlled operation. Type APPLY to continue: ")) : null;
+            const confirm = controlled
+                ? (approvalFlags.nonInteractive ? approvalFlags.confirm : await promptText("Controlled operation. Type APPLY to continue: "))
+                : null;
             if (controlled && confirm !== "APPLY") process.exit(4);
 
             const approval = createHumanApproval(reason, {
@@ -276,21 +305,28 @@ async function main() {
 
     const localInput = daemonInput;
 
+    // Mutating steps require confirm=APPLY at execution time.
+    const meta = getCapabilityMeta(capability as CapabilityName);
+    const effectiveControlled = controlled || !meta.readOnly;
+
     let approval = undefined;
     if (capabilityRequiresApproval(capability as CapabilityName)) {
-        const reason = await promptApproval(capability);
+        const reason = approvalFlags.nonInteractive ? approvalFlags.reason! : await promptApproval(capability);
         if (!reason) process.exit(4);
+
         const identity = identityRequired
-            ? (await promptText(`Approver identity required. Type identity (expected: ${cfg.governance.approverIdentity}): `))
+            ? (approvalFlags.nonInteractive ? approvalFlags.identity : await promptText(`Approver identity required. Type identity (expected: ${cfg.governance.approverIdentity}): `))
             : null;
         if (identityRequired && (!identity || identity.trim().length === 0)) process.exit(4);
 
-        const confirm = controlled ? (await promptText("Controlled operation. Type APPLY to continue: ")) : null;
-        if (controlled && confirm !== "APPLY") process.exit(4);
+        const confirm = effectiveControlled
+            ? (approvalFlags.nonInteractive ? approvalFlags.confirm : await promptText("Controlled operation. Type APPLY to continue: "))
+            : null;
+        if (effectiveControlled && confirm !== "APPLY") process.exit(4);
 
         approval = createHumanApproval(reason, {
             identity: identity ?? undefined,
-            confirm: controlled ? "APPLY" : undefined
+            confirm: effectiveControlled ? "APPLY" : undefined
         });
     }
 
