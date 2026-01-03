@@ -141,7 +141,9 @@ export async function tryRunViaDaemon(
             return {
                 ok: false,
                 capability,
-                error: "step_approval_required"
+                error: "step_approval_required",
+                // Include plan so callers can decide whether to auto-approve READ_ONLY flows.
+                result: { plan }
             };
         }
 

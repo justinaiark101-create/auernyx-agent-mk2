@@ -11,6 +11,25 @@ const path = require("path");
 const os = require("os");
 const cp = require("child_process");
 
+function parseArgs(argv) {
+  const out = {
+    inPath: undefined,
+    outPath: undefined,
+    keepTemp: false,
+    resizeOnly: false
+  };
+
+  for (const a of argv) {
+    if (a === "--keep-temp") out.keepTemp = true;
+    else if (a === "--resize-only") out.resizeOnly = true;
+  }
+
+  const positional = argv.filter((a) => !a.startsWith("--"));
+  out.inPath = positional[0];
+  out.outPath = positional[1];
+  return out;
+}
+
 function loadLauncherConfig(cwd) {
   const p = path.resolve(cwd, "tools", "launcher.config.json");
   if (!fs.existsSync(p)) return null;
@@ -103,8 +122,15 @@ function resizePngsWindows(absInPng, sizes, tempDir) {
     sizeArg
   ];
 
-  const res = cp.spawnSync("powershell.exe", args, { stdio: "inherit" });
-  if (res.status !== 0) throw new Error(`resize-png.ps1 failed (exit ${res.status})`);
+  const res = cp.spawnSync("powershell.exe", args, { encoding: "utf8" });
+  if (res.error) {
+    throw new Error(`Failed to launch powershell.exe for resize step: ${res.error.message}`);
+  }
+  if (res.status !== 0) {
+    const stderr = (res.stderr || "").trim();
+    const hint = stderr ? `\n${stderr}` : "";
+    throw new Error(`resize-png.ps1 failed (exit ${res.status})${hint}`);
+  }
 
   const pngBuffers = [];
   for (const s of sizes) {
@@ -120,8 +146,12 @@ function main() {
   const defaultIn = cfg?.iconSourcePng || path.join("clients", "vscode", "aeurnyx socal face.png");
   const defaultOut = cfg?.iconPath || path.join("assets", "auernyx.ico");
 
-  const inPath = process.argv[2] || defaultIn;
-  const outPath = process.argv[3] || defaultOut;
+  const parsed = parseArgs(process.argv.slice(2));
+  const keepTemp = parsed.keepTemp || process.env.AUERNYX_ICON_KEEP_TEMP === "1";
+  const resizeOnly = parsed.resizeOnly;
+
+  const inPath = parsed.inPath || defaultIn;
+  const outPath = parsed.outPath || defaultOut;
 
   const absIn = path.resolve(process.cwd(), inPath);
   const absOut = path.resolve(process.cwd(), outPath);
@@ -136,12 +166,23 @@ function main() {
   if (process.platform === "win32") {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "auernyx-ico-"));
     try {
+      console.log(`[make-ico] Resizing via ${path.resolve(process.cwd(), "tools", "resize-png.ps1")}`);
       pngs = resizePngsWindows(absIn, sizes, tempDir);
+
+      if (resizeOnly) {
+        console.log(`[make-ico] Resize-only mode; outputs in ${tempDir}`);
+        console.log("[make-ico] Done.");
+        return;
+      }
     } finally {
-      try {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch {
-        // ignore
+      if (keepTemp || resizeOnly) {
+        console.log(`[make-ico] Kept temp dir: ${tempDir}`);
+      } else {
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch {
+          // ignore
+        }
       }
     }
   } else {

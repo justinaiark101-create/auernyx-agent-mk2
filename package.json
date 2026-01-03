@@ -41,7 +41,9 @@
     "compile": "tsc -p ./",
     "cli": "node ./dist/clients/cli/auernyx.js",
     "daemon": "node ./dist/clients/cli/auernyx-daemon.js",
-    "assets:icon": "node ./tools/make-ico.js",
+    "assets:resize": "node ./tools/make-ico.js --resize-only --keep-temp",
+    "assets:ico": "node ./tools/make-ico.js",
+    "assets:icon": "npm run assets:ico",
     "watch": "tsc -watch -p ./"
   },
   "keywords": [],

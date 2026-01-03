@@ -9,6 +9,12 @@ import { loadConfig } from "../../core/config";
 import { planForIntent } from "../../core/planner";
 import * as readline from "readline";
 
+function planLooksReadOnly(plan: any): boolean {
+    const steps = plan?.steps;
+    if (!Array.isArray(steps) || steps.length === 0) return false;
+    return steps.every((s: any) => String(s?.type ?? "").toUpperCase() === "READ_ONLY");
+}
+
 async function promptApproval(capability: string): Promise<string | null> {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     const question = (q: string) => new Promise<string>((resolve) => rl.question(q, resolve));
@@ -239,6 +245,28 @@ function buildStructuredInput(argv: string[]): { daemonInput: unknown; daemonInt
     return { daemonInput, daemonIntent, controlled };
 }
 
+function buildNextCommandHint(args: {
+    raw: string;
+    effectiveControlled: boolean;
+    identityRequiredForControlled: boolean;
+    hasNoDaemon: boolean;
+    hasReason: boolean;
+    hasConfirmApply: boolean;
+    hasIdentity: boolean;
+}): string {
+    const base = `auernyx ${args.raw}`.trim();
+    const extra: string[] = [];
+
+    if (!args.hasNoDaemon) extra.push("--local");
+    if (args.effectiveControlled && !args.hasConfirmApply) extra.push("--confirm APPLY");
+
+    // For controlled operations, provide a non-interactive copy/paste path.
+    if (args.effectiveControlled && !args.hasReason) extra.push('--reason "<WHY>"');
+    if (args.effectiveControlled && args.identityRequiredForControlled && !args.hasIdentity) extra.push('--identity "<IDENTITY>"');
+
+    return extra.length ? `${base} ${extra.join(" ")}` : base;
+}
+
 async function main() {
     const repoRoot = process.cwd();
     const argv = process.argv.slice(2);
@@ -260,25 +288,37 @@ async function main() {
     const { daemonIntent, daemonInput, controlled } = buildStructuredInput(argv);
 
     const cfg = loadConfig(repoRoot);
-    const identityRequired = cfg.governance.approverIdentity.trim().length > 0;
+    const identityRequiredForControlled = cfg.governance.approverIdentity.trim().length > 0;
+
+    const hasReasonFlag = typeof parseStringFlag(argv, "--reason") === "string" || typeof parseStringFlag(argv, "--approve-reason") === "string";
+    const hasConfirmApplyFlag = parseStringFlag(argv, "--confirm") === "APPLY";
+    const hasIdentityFlag = typeof parseStringFlag(argv, "--identity") === "string";
 
     // Try daemon first (unless explicitly disabled).
     let daemonResp = noDaemon ? null : await tryRunViaDaemon({ repoRoot }, daemonIntent, daemonInput);
     if (daemonResp !== null) {
-        if (!daemonResp.ok && (daemonResp.error === "approval_required" || daemonResp.error === "step_approval_required")) {
+        if (
+            daemonResp !== null &&
+            !daemonResp.ok &&
+            (daemonResp.error === "approval_required" || daemonResp.error === "step_approval_required")
+        ) {
             const cap = daemonResp.capability ?? "capability";
-            const reason = approvalFlags.nonInteractive ? approvalFlags.reason! : await promptApproval(cap);
-            if (!reason) process.exit(4);
-
-            const identity = identityRequired
-                ? (approvalFlags.nonInteractive ? approvalFlags.identity : await promptText(`Approver identity required. Type identity (expected: ${cfg.governance.approverIdentity}): `))
-                : null;
-            if (identityRequired && (!identity || identity.trim().length === 0)) process.exit(4);
-
-            // Confirm is required for any non-readOnly capability, even via daemon.
             const capName = (typeof daemonResp.capability === "string" ? daemonResp.capability : undefined) as CapabilityName | undefined;
             const meta = capName ? getCapabilityMeta(capName) : undefined;
-            const effectiveControlled = controlled || (meta ? !meta.readOnly : false);
+            const daemonPlan = (daemonResp as any)?.result?.plan;
+            const effectiveControlled = controlled || (meta ? !meta.readOnly : !planLooksReadOnly(daemonPlan));
+
+            // READ_ONLY: no prompts; still emits approvals for audit trail.
+            const reasonInput = effectiveControlled
+                ? (approvalFlags.nonInteractive ? approvalFlags.reason! : await promptApproval(cap))
+                : (typeof approvalFlags.reason === "string" && approvalFlags.reason.trim().length > 0 ? approvalFlags.reason.trim() : "read-only auto-approved");
+            if (effectiveControlled && !reasonInput) process.exit(4);
+            const reason = typeof reasonInput === "string" && reasonInput.trim().length > 0 ? reasonInput.trim() : "read-only auto-approved";
+
+            const identity = effectiveControlled && identityRequiredForControlled
+                ? (approvalFlags.nonInteractive ? approvalFlags.identity : await promptText(`Approver identity required. Type identity (expected: ${cfg.governance.approverIdentity}): `))
+                : null;
+            if (effectiveControlled && identityRequiredForControlled && (!identity || identity.trim().length === 0)) process.exit(4);
 
             const confirm = effectiveControlled
                 ? (approvalFlags.nonInteractive ? approvalFlags.confirm : await promptText("Controlled operation. Type APPLY to continue: "))
@@ -289,12 +329,41 @@ async function main() {
                 identity: identity ?? undefined,
                 confirm: effectiveControlled ? "APPLY" : undefined
             });
+
             const retry = await tryRunViaDaemon({ repoRoot }, daemonIntent, daemonInput, approval);
             if (retry === null) {
                 // daemon disappeared mid-flight; fall through to local
                 daemonResp = null;
             } else {
                 daemonResp = retry;
+            }
+        }
+
+        // If we ended up with write_disabled from a read-only daemon, reroute controlled ops locally.
+        // This is not a bypass: local execution still requires approvals + confirm APPLY.
+        if (daemonResp !== null && !daemonResp.ok && String(daemonResp.error ?? "").trim() === "write_disabled") {
+            const capName = (typeof daemonResp.capability === "string" ? daemonResp.capability : undefined) as CapabilityName | undefined;
+            const meta = capName ? getCapabilityMeta(capName) : undefined;
+            const effectiveControlled = controlled || (meta ? !meta.readOnly : false);
+
+            if (effectiveControlled) {
+                const next = buildNextCommandHint({
+                    raw,
+                    effectiveControlled,
+                    identityRequiredForControlled,
+                    hasNoDaemon: noDaemon,
+                    hasReason: hasReasonFlag,
+                    hasConfirmApply: hasConfirmApplyFlag,
+                    hasIdentity: hasIdentityFlag
+                });
+
+                // Informational only: we're about to recover by routing locally.
+                // Use stdout so scripts don't treat this as a failure.
+                // eslint-disable-next-line no-console
+                console.log("NOTICE: Controlled op hit read-only daemon; routing locally.");
+                // eslint-disable-next-line no-console
+                console.log("NEXT (copy/paste): " + next);
+                daemonResp = null;
             }
         }
 
@@ -325,14 +394,18 @@ async function main() {
     const meta = getCapabilityMeta(capability as CapabilityName);
     const effectiveControlled = controlled || !meta.readOnly;
 
-    // Governed execution requires step approvals. Use a single prompt (or --reason) and map it to each planned step.
-    const reason = approvalFlags.nonInteractive ? approvalFlags.reason! : await promptApproval(capability);
-    if (!reason) process.exit(4);
+    // Governed execution requires per-step approvals.
+    // READ_ONLY: auto-approve to remove production friction while keeping receipts/auditability.
+    const reasonInput = effectiveControlled
+        ? (approvalFlags.nonInteractive ? approvalFlags.reason! : await promptApproval(capability))
+        : (typeof approvalFlags.reason === "string" && approvalFlags.reason.trim().length > 0 ? approvalFlags.reason.trim() : "read-only auto-approved");
+    if (effectiveControlled && !reasonInput) process.exit(4);
+    const reason = typeof reasonInput === "string" && reasonInput.trim().length > 0 ? reasonInput.trim() : "read-only auto-approved";
 
-    const identity = identityRequired
+    const identity = effectiveControlled && identityRequiredForControlled
         ? (approvalFlags.nonInteractive ? approvalFlags.identity : await promptText(`Approver identity required. Type identity (expected: ${cfg.governance.approverIdentity}): `))
         : null;
-    if (identityRequired && (!identity || identity.trim().length === 0)) process.exit(4);
+    if (effectiveControlled && identityRequiredForControlled && (!identity || identity.trim().length === 0)) process.exit(4);
 
     const confirm = effectiveControlled
         ? (approvalFlags.nonInteractive ? approvalFlags.confirm : await promptText("Controlled operation. Type APPLY to continue: "))
@@ -356,6 +429,10 @@ async function main() {
     });
 
     if (!lifecycle.ok) {
+        if (lifecycle.refusal?.code === "write_disabled" && effectiveControlled && !cfg.writeEnabled) {
+            // eslint-disable-next-line no-console
+            console.error("NEXT: Enable writes with AUERNYX_WRITE_ENABLED=1 or set writeEnabled:true in config/auernyx.config.json");
+        }
         // eslint-disable-next-line no-console
         console.error(lifecycle.refusal?.code ?? lifecycle.refusal?.reason ?? "refused");
         process.exit(3);

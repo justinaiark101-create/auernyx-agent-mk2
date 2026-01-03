@@ -6,4 +6,5 @@
 - Improved VS Code refusal UX to clearly explain read-only daemon routing and the correct next step.
 - Extended launcher to include Smoke Topdown entrypoint and future packaging handoff (cmd → exe) via config.
 - Added deterministic icon pipeline (multi-size .ico) and a Desktop shortcut generator using the icon.
+- Made CLI read-only-daemon reroute hints PowerShell-friendly (informational output no longer trips error handling when the CLI successfully recovers by routing locally).
 
