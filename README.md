@@ -69,6 +69,22 @@ Notes:
 
 The browser UI is a control surface, not a privileged channel. All requests are subject to the same governance guard, write lock, approval friction, and refusal semantics as any other client.
 
+### CLI approvals (non-interactive)
+
+The CLI supports non-interactive approvals so automation doesn’t hang on prompts:
+
+- `--reason <TEXT>` (required to skip prompts)
+- `--identity <TEXT>` (only required when `governance.approverIdentity` is configured)
+- `--confirm APPLY` (required for any mutating operation)
+
+Examples:
+
+- Baseline pre-check (mutating; requires explicit APPLY):
+	- `AUERNYX_WRITE_ENABLED=1 npm run cli -- baseline pre --reason "baseline pre-check" --confirm APPLY`
+- Read-only checks (no APPLY needed):
+	- `npm run cli -- scan . --reason "work check: scan"`
+	- `npm run cli -- memory --reason "work check: memory"`
+
 ### Receipts API (read-only)
 
 If receipts are enabled and a run produces a receipt, the daemon can serve receipt metadata and artifacts:

@@ -15,6 +15,7 @@ export type RunLifecycleResult = {
     result?: unknown;
     refusal?: { code: string; reason: string };
     missingStepIds?: string[];
+    warnings?: string[];
     receipt?: { runId: string; dirPath: string };
 };
 
@@ -199,8 +200,10 @@ export async function runLifecycle(args: {
         };
     }
 
+    const warnings: string[] = [];
     if (duplicateApprovalStepIds.size > 0) {
         receipt?.appendEvent("approval.duplicate", { stepIds: Array.from(duplicateApprovalStepIds).sort(), policy: "last_write_wins" });
+        warnings.push("duplicate_step_approval_last_write_wins");
     }
 
     const outputs: unknown[] = [];
@@ -213,6 +216,7 @@ export async function runLifecycle(args: {
             status: "REFUSED",
             stage: "execution",
             planId: (plan as any).planId,
+            ...(warnings.length ? { warnings } : {}),
             refusal: { code: "unknown_step", reason: `Unknown stepId: ${requestedStepId}` }
         });
         const finalized = receipt?.finalize();
@@ -220,6 +224,7 @@ export async function runLifecycle(args: {
             ok: false,
             capability: plan.steps[0]?.tool?.name,
             plan,
+            ...(warnings.length ? { warnings } : {}),
             refusal: { code: "unknown_step", reason: `Unknown stepId: ${requestedStepId}` },
             ...(finalized ? { receipt: finalized } : {})
         };
@@ -242,6 +247,7 @@ export async function runLifecycle(args: {
                     stage: "approval",
                     planId: (plan as any).planId,
                     missingStepIds,
+                    ...(warnings.length ? { warnings } : {}),
                     refusal: { code: "step_approval_required", reason: "step approvals required" }
                 });
                 const finalized = receipt?.finalize();
@@ -250,6 +256,7 @@ export async function runLifecycle(args: {
                     capability: plan.steps[0]?.tool?.name,
                     plan,
                     missingStepIds,
+                    ...(warnings.length ? { warnings } : {}),
                     refusal: { code: "step_approval_required", reason: "step approvals required" },
                     ...(finalized ? { receipt: finalized } : {})
                 };
@@ -275,6 +282,7 @@ export async function runLifecycle(args: {
             ok: true,
             status: "OK",
             planId: (plan as any).planId,
+            ...(warnings.length ? { warnings } : {}),
             steps: requestedStepId ? [requestedStepId] : plan.steps.map((s: any) => s.id)
         });
         const finalized = receipt?.finalize();
@@ -283,18 +291,27 @@ export async function runLifecycle(args: {
             capability: plan.steps[0]?.tool?.name,
             plan,
             result: outputs,
+            ...(warnings.length ? { warnings } : {}),
             ...(finalized ? { receipt: finalized } : {})
         };
     } catch (e) {
         const refusal = classifyRefusal(e);
         receipt?.appendEvent("step.error", { refusal });
         receipt?.writeJson("outputs.json", { outputs });
-        receipt?.writeJson("final.json", { ok: false, status: "REFUSED", stage: "execution", planId: (plan as any).planId, refusal });
+        receipt?.writeJson("final.json", {
+            ok: false,
+            status: "REFUSED",
+            stage: "execution",
+            planId: (plan as any).planId,
+            ...(warnings.length ? { warnings } : {}),
+            refusal
+        });
         const finalized = receipt?.finalize();
         return {
             ok: false,
             capability: plan.steps[0]?.tool?.name,
             plan,
+            ...(warnings.length ? { warnings } : {}),
             refusal,
             ...(finalized ? { receipt: finalized } : {})
         };
