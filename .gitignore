@@ -6,6 +6,7 @@ external/
 .venv/
 .canon/
 var/canon/
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 .auernyx/
 docs/SEARCH.md

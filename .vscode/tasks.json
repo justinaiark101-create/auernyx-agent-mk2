@@ -1,0 +1,129 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build Extension",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"compile"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true
+			},
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Smoke Topdown (run)",
+			"type": "process",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".\\tools\\smoke-topdown.ps1"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Smoke Topdown (sha256)",
+			"type": "process",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"(Get-FileHash -Algorithm SHA256 '.\\tools\\smoke-topdown.ps1').Hash"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Make Launcher Icon (.ico)",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				".\\tools\\make-ico.js",
+				"clients\\vscode\\aeurnyx socal face.png",
+				"assets\\auernyx.ico"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Assets Icon (regen)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"assets:icon"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Kotlin Proof Battery",
+			"type": "process",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"if (-not $env:JAVA_HOME) { $jdkRoot = Join-Path (Get-Location) '.gradle-bootstrap\\jdk17'; $jdkDir = Get-ChildItem -Path $jdkRoot -Directory -ErrorAction SilentlyContinue | Where-Object { Test-Path (Join-Path $_.FullName 'bin\\java.exe') } | Select-Object -First 1; if ($jdkDir) { $env:JAVA_HOME = $jdkDir.FullName; $env:Path = ($env:JAVA_HOME + '\\bin;' + $env:Path) } }; .\\gradlew.bat test"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}\\branches\\kotlin-consumer"
+			},
+			"problemMatcher": [],
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "Kotlin CLI Preview Run",
+			"type": "process",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"if (-not $env:JAVA_HOME) { $jdkRoot = Join-Path (Get-Location) '.gradle-bootstrap\\jdk17'; $jdkDir = Get-ChildItem -Path $jdkRoot -Directory -ErrorAction SilentlyContinue | Where-Object { Test-Path (Join-Path $_.FullName 'bin\\java.exe') } | Select-Object -First 1; if ($jdkDir) { $env:JAVA_HOME = $jdkDir.FullName; $env:Path = ($env:JAVA_HOME + '\\bin;' + $env:Path) } }; .\\gradlew.bat run --args='--envelope ${input:envelopePath} --receipt-dir ${input:receiptDir} --armed false --env false --repo-root ${workspaceFolder}'"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}\\branches\\kotlin-consumer"
+			},
+			"problemMatcher": [],
+			"group": "test"
+		}
+	],
+	"inputs": [
+		{
+			"id": "envelopePath",
+			"type": "promptString",
+			"description": "Path to envelope.json",
+			"default": "${workspaceFolder}\\.auernyx\\tmp\\envelope.json"
+		},
+		{
+			"id": "receiptDir",
+			"type": "promptString",
+			"description": "Receipt output dir",
+			"default": "${workspaceFolder}\\.auernyx\\receipts\\kotlin-preview"
+		}
+	]
+}

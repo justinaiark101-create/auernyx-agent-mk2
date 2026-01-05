@@ -1,0 +1,7 @@
+.gradle/
+.gradle-bootstrap/
+.kotlin/
+build/
+out/
+gradle-test.log
+gradle-wrapper.log
