@@ -28,3 +28,15 @@ Artifacts:
 Regression guard / sanity-check entrypoint:
 - file: `tools/smoke-topdown.ps1`
 - sha256: `51BA06443FAAC6A7682DDA57B3F9949D113106A4E665653D8AA4EDB6EB1B25D7`
+
+## 2026-01-05 — Closeout baseline POST
+
+Context:
+- Code state: `branches/kotlin-consumer` (Kotlin consumer milestone)
+- Sequence requested: baseline POST at end of work
+
+Artifacts:
+- Baseline POST receipt
+  - runId: `1767603147424-74211fa116dd`
+  - file: `.auernyx/receipts/1767603147424-74211fa116dd/final.json`
+  - sha256: `51E376540267D4A0B2416C0C6EF14794672A6B69290070367D40DD94415869C6`

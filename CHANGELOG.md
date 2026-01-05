@@ -8,3 +8,10 @@
 - Added deterministic icon pipeline (multi-size .ico) and a Desktop shortcut generator using the icon.
 - Made CLI read-only-daemon reroute hints PowerShell-friendly (informational output no longer trips error handling when the CLI successfully recovers by routing locally).
 
+## 2026-01-05
+
+- Milestone: Kotlin consumer sweep v1 (isolated under `branches/kotlin-consumer`) with locked decision/refusal codes, digest verification, governance receipt emission, and a passing proof battery.
+- Added a hostile stress branch (`branches/kotlin-consumer-hostile`) with a digest-fuzzer test to prove refusal logic under load.
+- Formalized trunk freeze semantics by anchoring on `yggdrasil-trunk@v1` as contract law (no contract changes without an intentional version bump).
+- Added one-click repo tasking for Kotlin verification via `.vscode/tasks.json` (Kotlin Proof Battery + Kotlin CLI Preview Run).
+
