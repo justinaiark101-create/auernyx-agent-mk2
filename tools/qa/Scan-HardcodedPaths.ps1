@@ -34,7 +34,7 @@ function Get-ScanFiles([string]$Root) {
     }
 }
 
-function Scan-Root([string]$Root, [string]$Label) {
+function Find-RootScanHits([string]$Root, [string]$Label) {
   Write-Host ("Scanning {0}: {1}" -f $Label, $Root)
   $hits = New-Object System.Collections.Generic.List[object]
 
@@ -61,7 +61,7 @@ function Read-BranchesConfig([string]$TrunkRoot) {
 $trunkRoot = Get-TrunkRoot
 
 $allHits = New-Object System.Collections.Generic.List[object]
-$trunkHits = Scan-Root -Root $trunkRoot -Label 'TRUNK'
+$trunkHits = Find-RootScanHits -Root $trunkRoot -Label 'TRUNK'
 if ($trunkHits) { $allHits.AddRange($trunkHits) }
 
 if ($ScanBranches) {
@@ -75,7 +75,7 @@ if ($ScanBranches) {
       if (-not (Test-Path -LiteralPath $entry)) { continue }
       $entryPath = (Resolve-Path -LiteralPath $entry).Path
       $root = Split-Path -Parent $entryPath
-      $branchHits = Scan-Root -Root $root -Label ("BRANCH:{0}" -f $bName)
+      $branchHits = Find-RootScanHits -Root $root -Label ("BRANCH:{0}" -f $bName)
       if ($branchHits) { $allHits.AddRange($branchHits) }
     }
   }

@@ -64,7 +64,7 @@ function Invoke-AuernyxPlanPreview {
 }
 
 function Invoke-AuernyxBranch {
-  [CmdletBinding(SupportsShouldProcess)]
+  [CmdletBinding()]
   param(
     [Parameter(Mandatory)]
     [string]$BranchId,                 # e.g. "skjoldr", "aesir"
@@ -152,7 +152,7 @@ function New-UedenApprovalRecord {
 }
 
 function Write-UedenAppendOnlyRecord {
-  [CmdletBinding(SupportsShouldProcess)]
+  [CmdletBinding()]
   param(
     [Parameter(Mandatory)]
     [object]$Record,
@@ -175,7 +175,7 @@ function Write-UedenAppendOnlyRecord {
 }
 
 function Write-UedenReceiptBundle {
-  [CmdletBinding(SupportsShouldProcess)]
+  [CmdletBinding()]
   param(
     [Parameter(Mandatory)]
     [object]$Plan,

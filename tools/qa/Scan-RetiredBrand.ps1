@@ -1,3 +1,4 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '', Justification = 'Legacy QA entrypoint name; behavior is internal and read-only.')]
 [CmdletBinding()]
 param(
   [switch] $ScanBranches,
@@ -31,7 +32,7 @@ function Get-ScanFiles([string]$Root) {
     }
 }
 
-function Scan-RetiredBrand([string]$Root, [string]$Label) {
+function Find-RetiredBrandHits([string]$Root, [string]$Label) {
   Write-Host ("Scanning retired-brand token ({0}) in {1}: {2}" -f $Token, $Label, $Root)
 
   $allowRelPrefixes = @(
@@ -72,7 +73,7 @@ function Read-BranchesConfig([string]$TrunkRoot) {
 $trunkRoot = Get-TrunkRoot
 
 $allHits = New-Object System.Collections.Generic.List[object]
-$trunkHits = Scan-RetiredBrand -Root $trunkRoot -Label 'TRUNK'
+$trunkHits = Find-RetiredBrandHits -Root $trunkRoot -Label 'TRUNK'
 if ($trunkHits) { $allHits.AddRange($trunkHits) }
 
 if ($ScanBranches) {
@@ -86,7 +87,7 @@ if ($ScanBranches) {
       if (-not (Test-Path -LiteralPath $entry)) { continue }
       $entryPath = (Resolve-Path -LiteralPath $entry).Path
       $root = Split-Path -Parent $entryPath
-      $branchHits = Scan-RetiredBrand -Root $root -Label ("BRANCH:{0}" -f $bName)
+      $branchHits = Find-RetiredBrandHits -Root $root -Label ("BRANCH:{0}" -f $bName)
       if ($branchHits) { $allHits.AddRange($branchHits) }
     }
   }

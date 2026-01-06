@@ -202,7 +202,8 @@ function Invoke-ExternalEntry {
   param(
     [Parameter(Mandatory)] [string] $EntryPath,
     [string] $Type = 'auto',
-    [string[]] $Args = @()
+    [Alias('Args')]
+    [string[]] $EntryArgs = @()
   )
 
   $resolved = (Resolve-Path -LiteralPath $EntryPath).Path
@@ -220,10 +221,10 @@ function Invoke-ExternalEntry {
   $stderrPath = Join-Path $env:TEMP ('branchinvoke-{0}-err.txt' -f ([Guid]::NewGuid().ToString('n')))
 
   if ($kind -eq 'cmd') {
-    $argList = @('/c', $resolved) + $Args
+    $argList = @('/c', $resolved) + $EntryArgs
     $proc = Start-Process -FilePath 'cmd.exe' -ArgumentList $argList -WorkingDirectory $workDir -Wait -PassThru -NoNewWindow -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
   } else {
-    $argList = @('-NoProfile','-ExecutionPolicy','Bypass','-File', $resolved) + $Args
+    $argList = @('-NoProfile','-ExecutionPolicy','Bypass','-File', $resolved) + $EntryArgs
     $proc = Start-Process -FilePath 'powershell' -ArgumentList $argList -WorkingDirectory $workDir -Wait -PassThru -NoNewWindow -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
   }
 
@@ -266,7 +267,8 @@ function Invoke-BranchWithReceipt {
   param(
     [Parameter(Mandatory)] [string] $BranchName,
     [switch] $RunBaseline,
-    [string[]] $Args = @()
+    [Alias('Args')]
+    [string[]] $EntryArgs = @()
   )
 
   $trunkRoot = Get-TrunkRoot
@@ -307,7 +309,7 @@ function Invoke-BranchWithReceipt {
     $pre = Invoke-BaselinePhase -Mode 'pre' -TrunkRoot $trunkRoot -Label $baselineLabel
   }
 
-  $exec = Invoke-ExternalEntry -EntryPath $entryPath -Type $cfg.type -Args $Args
+  $exec = Invoke-ExternalEntry -EntryPath $entryPath -Type $cfg.type -Args $EntryArgs
 
   if ($RunBaseline) {
     $post = Invoke-BaselinePhase -Mode 'post' -TrunkRoot $trunkRoot -Label $baselineLabel
