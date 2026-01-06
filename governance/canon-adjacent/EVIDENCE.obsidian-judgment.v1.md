@@ -39,7 +39,7 @@ Mode: Maintenance-safe (schema + law artifacts, no new workflows)
   - MNEMA.CANON.CHANGES_REQUIRE_SOVRETH (hard_refusal)
 
   Commit (Mk2):
-  - SHA: __________
+  - SHA: a9d973854089cfbf2e59644d3233cadb79c292d3
 
 ## Behavioral change (SQUAD — Obsidian Judgment module)
 File:
