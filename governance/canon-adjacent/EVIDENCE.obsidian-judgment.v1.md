@@ -80,7 +80,9 @@ Obsidian constraint invariants (hard_refusal):
 ## Proof battery results
 Mk2:
 - Retired-brand scan: PASS
+- Hardcoded-path scan: PASS
 - npm run compile: PASS
+- Top-down smoke: PASS
 
 SQUAD:
 - Python syntax: py -3 -m py_compile <module>: PASS
@@ -88,11 +90,14 @@ SQUAD:
 ## Commits
 Mk2 commit:
 - Message: governance: add Obsidian judgment schema + blade/constraints; wire into index + Mnema
-- SHA: f31ac3ef3a95e095e11cc9f462fd11c8be1c731e
+- SHA: f31ac3ef3a95e095e11cc9f462fd11c8be1c731e (branch: branches/kotlin-consumer; tag: TBD; proof: Mk2 PASS list above)
 
 SQUAD commit:
 - Message: obsidian: refuse clear on core/author tamper without restoration proof
-- SHA: 583ab9d716632684bd957b78894df300fedf5c1f
+- SHA: 583ab9d716632684bd957b78894df300fedf5c1f (branch: governance/wip-provenance-mismatch; tag: TBD; proof: SQUAD PASS list above)
+
+Mk2 commit (Sovreth addition):
+- SHA: a9d973854089cfbf2e59644d3233cadb79c292d3 (branch: branches/kotlin-consumer; tag: TBD; proof: Mk2 PASS list above)
 
 ## Notes
 - This change set strengthens auditability and prevents “usability edits” from bypassing author/core governance protection.
