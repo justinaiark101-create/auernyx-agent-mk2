@@ -1,4 +1,36 @@
-import * as crypto from "crypto";
+// Planner module for Mk2
+// Defines Plan and Step types and a basic Planner class
+
+export type Step = {
+  id: string;
+  action: string;
+  tool: string;
+  requiresEvidence: string[];
+  rollback?: string;
+};
+
+export type Plan = {
+  intent: string;
+  steps: Step[];
+};
+
+export class Planner {
+  // Generate a plan from intent and context
+  createPlan(intent: string, context?: any): Plan {
+    // Minimal stub: returns a plan with one step
+    return {
+      intent,
+      steps: [
+        {
+          id: "step-1",
+          action: "exampleAction",
+          tool: "exampleTool",
+          requiresEvidence: [],
+        },
+      ],
+    };
+  }
+}import * as crypto from "crypto";
 import { CapabilityName, getCapabilityMeta } from "./policy";
 import type { Router } from "./router";
 

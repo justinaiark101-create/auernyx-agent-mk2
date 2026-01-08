@@ -42,9 +42,10 @@
     "@types/node": "^20.19.25",
     "@types/vscode": "^1.106.1",
     "@vscode/test-electron": "^2.5.2",
+    "ajv": "^8.17.1",
     "typescript": "^5.9.3",
     "webpack-cli": "^6.0.1"
-  },
+  }
   "scripts": {
     "compile": "tsc -p ./",
     "cli": "node ./dist/clients/cli/auernyx.js",
@@ -52,10 +53,13 @@
     "assets:resize": "node ./tools/make-ico.js --resize-only --keep-temp",
     "assets:ico": "node ./tools/make-ico.js",
     "assets:icon": "npm run assets:ico",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "registry:generate": "node tools/volatility/generate-matrix.mjs",
+    "volatility:canary": "node tools/volatility/run-matrix.mjs branches/compat-matrix.generated.json",
+    "volatility:prs": "node tools/volatility/open-propagation-prs.mjs branches/compat-matrix.generated.json"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "module"
 }
