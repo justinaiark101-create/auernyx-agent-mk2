@@ -1,5 +1,5 @@
-import type { RouterContext } from "../core/router";
-import { getSkjoldrFirewallStatus, parseSkjoldrJson, runSkjoldrCommand } from "../core/skjoldrFirewall";
+import type { RouterContext } from "../core/router.js";
+import { getSkjoldrFirewallStatus, parseSkjoldrJson, runSkjoldrCommand } from "../core/skjoldrFirewall.js";
 
 export async function skjoldrFirewallStatus(ctx: RouterContext, _input?: unknown): Promise<unknown> {
     const status = getSkjoldrFirewallStatus(ctx.repoRoot, { allowAutoDetect: true });

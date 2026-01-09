@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
-import type { RouterContext } from "../core/router";
+import type { RouterContext } from "../core/router.js";
 
 type SearchDocAction = "add" | "remove";
 

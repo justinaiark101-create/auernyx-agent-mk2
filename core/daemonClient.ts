@@ -1,5 +1,5 @@
 import * as http from "http";
-import { loadConfig } from "./config";
+import { loadConfig } from "./config.js";
 
 export interface DaemonRunResponse {
     ok: boolean;

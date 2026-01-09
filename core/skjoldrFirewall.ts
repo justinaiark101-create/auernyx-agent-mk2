@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import { spawn } from "child_process";
-import { sha256FileHex } from "./integrity";
-import { loadConfig } from "./config";
+import { sha256FileHex } from "./integrity.js";
+import { loadConfig } from "./config.js";
 
 export type SkjoldrFirewallStatus = {
     enabled: boolean;

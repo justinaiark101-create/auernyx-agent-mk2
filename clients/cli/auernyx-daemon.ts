@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { startDaemon } from "../../core/server";
+import { startDaemon } from "../../core/server.js";
 
 function parseArgs(argv: string[]): { repoRoot?: string } {
     const args = argv.slice(2);

@@ -1,5 +1,5 @@
-import type { RouterContext } from "../core/router";
-import { verifyLedgerIntegrity } from "../core/integrity";
+import type { RouterContext } from "../core/router.js";
+import { verifyLedgerIntegrity } from "../core/integrity.js";
 
 export async function baselinePost(ctx: RouterContext, _input?: unknown): Promise<unknown> {
     const integrity = verifyLedgerIntegrity(ctx.repoRoot);

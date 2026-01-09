@@ -1,4 +1,4 @@
-import type { CapabilityName } from "./policy";
+import type { CapabilityName } from "./policy.js";
 
 export interface Approval {
     approvedBy: "human";

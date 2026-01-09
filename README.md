@@ -50,6 +50,18 @@ auernyx-agent/
 
 This repo also supports running Auernyx outside VS Code via a local daemon and a CLI client.
 
+## Module system (longevity)
+
+This repo emits **dual outputs** for longevity and compatibility:
+- `dist/cjs/**` (CommonJS; VS Code + Node compatibility)
+- `dist/esm/**` (ESM; modern consumers)
+
+Runtime/build alignment is enforced via:
+- root `package.json` uses `"type": "commonjs"`
+- `dist/esm/package.json` uses `"type": "module"` so Node executes `dist/esm/**/*.js` as ESM
+
+To sanity-check the full build + runtime path, run `npm run verify`.
+
 
 Windows convenience launchers:
 

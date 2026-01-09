@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
-import type { Plan } from "./planner";
-import type { CapabilityName } from "./policy";
+import type { Plan } from "./planner.js";
+import type { CapabilityName } from "./policy.js";
 
 export type VsCodePolicy = {
     version: string;

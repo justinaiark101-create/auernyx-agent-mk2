@@ -1,16 +1,16 @@
-import type { Approval, StepApproval } from "./approvals";
-import type { Router, RouterContext } from "./router";
-import { legitimacyGate } from "./legitimacyGate";
-import { planForIntent, type Plan } from "./planner";
-import { createReceiptWriter } from "./receipts";
-import { loadConfig } from "./config";
-import { evidenceFromExternalRef, evidenceFromFileHash, evidenceFromPastedText, type Evidence } from "./evidence";
-import { ApprovalRequiredError } from "./approvals";
+import type { Approval, StepApproval } from "./approvals.js";
+import type { Router, RouterContext } from "./router.js";
+import { legitimacyGate } from "./legitimacyGate.js";
+import { planForIntent, type Plan } from "./planner.js";
+import { createReceiptWriter } from "./receipts.js";
+import { loadConfig } from "./config.js";
+import { evidenceFromExternalRef, evidenceFromFileHash, evidenceFromPastedText, type Evidence } from "./evidence.js";
+import { ApprovalRequiredError } from "./approvals.js";
 import * as crypto from "crypto";
-import { activateJudgment, appendProvenanceAudit, clearJudgment, ensureGenesisRecord, verifyProvenance } from "./provenance";
-import { gitStatusPorcelain, isDirtyPorcelain } from "./git";
-import { canonGitignoreStatus, computePlanHash, computePseudoDiff, loadVsCodePolicy } from "./vscodePolicy";
-import { GovernanceRefusalError } from "./governanceRefusal";
+import { activateJudgment, appendProvenanceAudit, clearJudgment, ensureGenesisRecord, verifyProvenance } from "./provenance.js";
+import { gitStatusPorcelain, isDirtyPorcelain } from "./git.js";
+import { canonGitignoreStatus, computePlanHash, computePseudoDiff, loadVsCodePolicy } from "./vscodePolicy.js";
+import { GovernanceRefusalError } from "./governanceRefusal.js";
 
 type DecisionCode = "OK_PREVIEW_ONLY" | "OK_APPLIED";
 type RefusalCode =

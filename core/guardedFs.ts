@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
-import { GovernanceRefusalError, isPathProtected } from "./governanceRefusal";
-import { loadConfig } from "./config";
+import { GovernanceRefusalError, isPathProtected } from "./governanceRefusal.js";
+import { loadConfig } from "./config.js";
 
 function ensureNotProtected(repoRoot: string, targetPath: string, system: string, requestedAction: string): void {
     const cfg = loadConfig(repoRoot);

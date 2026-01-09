@@ -1,6 +1,6 @@
-import type { RouterContext } from "../core/router";
-import { GovernanceRefusalError } from "../core/governanceRefusal";
-import { getKintsugiPolicy, policyHash, recordHumanApprovedPolicyChange, verifyKintsugiIntegrity } from "../core/kintsugi/memory";
+import type { RouterContext } from "../core/router.js";
+import { GovernanceRefusalError } from "../core/governanceRefusal.js";
+import { getKintsugiPolicy, policyHash, recordHumanApprovedPolicyChange, verifyKintsugiIntegrity } from "../core/kintsugi/memory.js";
 
 type Suggestion = {
     id: string;

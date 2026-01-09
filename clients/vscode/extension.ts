@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
-import { createCore } from "../../core/server";
-import { tryRunViaDaemon } from "../../core/daemonClient";
-import { createHumanApproval } from "../../core/approvals";
-import { capabilityRequiresApproval, CapabilityName } from "../../core/policy";
-import { runLifecycle } from "../../core/runLifecycle";
-import { isJudgmentActive } from "../../core/provenance";
+import { createCore } from "../../core/server.js";
+import { tryRunViaDaemon } from "../../core/daemonClient.js";
+import { createHumanApproval } from "../../core/approvals.js";
+import { capabilityRequiresApproval, CapabilityName } from "../../core/policy.js";
+import { runLifecycle } from "../../core/runLifecycle.js";
+import { isJudgmentActive } from "../../core/provenance.js";
 
 function getJudgmentClipArtLines(): string[] {
     // CLIP ART DROP-IN SECTION

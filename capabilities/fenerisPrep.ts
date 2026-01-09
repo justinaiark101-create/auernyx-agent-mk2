@@ -1,6 +1,6 @@
 import * as path from "path";
-import type { RouterContext } from "../core/router";
-import { guardedMkdir, guardedWriteFile } from "../core/guardedFs";
+import type { RouterContext } from "../core/router.js";
+import { guardedMkdir, guardedWriteFile } from "../core/guardedFs.js";
 
 export async function fenerisPrep(ctx: RouterContext, _input?: unknown): Promise<{ targetDir: string }> {
     const targetDir = path.join(ctx.repoRoot, "feneris-windows");

@@ -1,5 +1,5 @@
-import type { RouterContext } from "../core/router";
-import { getSkjoldrFirewallStatus, runSkjoldrJsonCommand } from "../core/skjoldrFirewall";
+import type { RouterContext } from "../core/router.js";
+import { getSkjoldrFirewallStatus, runSkjoldrJsonCommand } from "../core/skjoldrFirewall.js";
 
 export interface SkjoldrApplyProfileInput {
     profile: string;

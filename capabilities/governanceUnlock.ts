@@ -1,6 +1,6 @@
-import type { RouterContext } from "../core/router";
-import { verifyLedgerIntegrity } from "../core/integrity";
-import { readGovernanceLock, writeGovernanceLock } from "../core/governanceLock";
+import type { RouterContext } from "../core/router.js";
+import { verifyLedgerIntegrity } from "../core/integrity.js";
+import { readGovernanceLock, writeGovernanceLock } from "../core/governanceLock.js";
 
 export async function governanceUnlock(ctx: RouterContext, _input?: unknown): Promise<unknown> {
     const current = readGovernanceLock(ctx.repoRoot);

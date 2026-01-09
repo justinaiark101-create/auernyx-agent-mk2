@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
-import type { RouterContext } from "../core/router";
-import { loadConfig } from "../core/config";
+import type { RouterContext } from "../core/router.js";
+import { loadConfig } from "../core/config.js";
 
 export interface ScanRepoInput {
     targetDir?: string;

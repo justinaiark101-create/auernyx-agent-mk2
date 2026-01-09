@@ -1,5 +1,5 @@
-import type { RouterContext } from "../core/router";
-import { getSkjoldrFirewallStatus, runSkjoldrJsonCommand, verifyBaselineSnapshot } from "../core/skjoldrFirewall";
+import type { RouterContext } from "../core/router.js";
+import { getSkjoldrFirewallStatus, runSkjoldrJsonCommand, verifyBaselineSnapshot } from "../core/skjoldrFirewall.js";
 
 export async function skjoldrFirewallRestoreBaseline(ctx: RouterContext, input?: unknown): Promise<unknown> {
     const status = getSkjoldrFirewallStatus(ctx.repoRoot, { allowAutoDetect: false });

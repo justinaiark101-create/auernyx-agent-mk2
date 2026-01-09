@@ -133,7 +133,7 @@ From the repo root:
 - `npm run compile`
 
 2) Start daemon:
-- `node dist/core/server.js`
+- `node dist/cjs/core/server.js`
 
 By default it binds to `127.0.0.1:43117`.
 
@@ -150,13 +150,13 @@ Environment overrides:
 After compile:
 
 - Run a scan of the current repo root:
-  - `node dist/clients/cli/auernyx.js scan`
+  - `node dist/cjs/clients/cli/auernyx.js scan`
 
 - Run a scan of a specific directory:
-  - `node dist/clients/cli/auernyx.js scan C:\\somepath`
+  - `node dist/cjs/clients/cli/auernyx.js scan C:\\somepath`
 
 - Trigger feneris prep:
-  - `node dist/clients/cli/auernyx.js feneris`
+  - `node dist/cjs/clients/cli/auernyx.js feneris`
 
 The CLI will:
 1) Try the daemon (`POST /run`)
@@ -171,8 +171,8 @@ These are copy/paste examples that exercise the daemon end-to-end.
 Prereqs:
 - `npm run compile`
 - Start daemon (from repo root):
-  - `node dist/core/server.js`
-  - or `node dist/clients/cli/auernyx-daemon.js`
+  - `node dist/cjs/core/server.js`
+  - or `node dist/cjs/clients/cli/auernyx-daemon.js`
 
 ### Kintsugi quickstart (recommended flow)
 
@@ -298,30 +298,30 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:43117/run" -ContentType "a
 
 The CLI prompts for approval interactively (reason text), so these are safe quick checks:
 
-- `node dist/clients/cli/auernyx.js memory`
-- `node dist/clients/cli/auernyx.js baseline pre`
-- `node dist/clients/cli/auernyx.js rollback known good`
+- `node dist/cjs/clients/cli/auernyx.js memory`
+- `node dist/cjs/clients/cli/auernyx.js baseline pre`
+- `node dist/cjs/clients/cli/auernyx.js rollback known good`
 
 More structured CLI inputs:
 
 - List KGS entries (limit 10):
-  - `node dist/clients/cli/auernyx.js rollback list --limit 10`
+  - `node dist/cjs/clients/cli/auernyx.js rollback list --limit 10`
 - Restore KGS:
-  - `node dist/clients/cli/auernyx.js rollback restore <KGS_ID>`
+  - `node dist/cjs/clients/cli/auernyx.js rollback restore <KGS_ID>`
 - Propose fixes (read-only):
-  - `node dist/clients/cli/auernyx.js propose`
+  - `node dist/cjs/clients/cli/auernyx.js propose`
 - Apply a suggested fix (mutating):
-  - `node dist/clients/cli/auernyx.js propose apply enable-riskTolerance-controlled`
+  - `node dist/cjs/clients/cli/auernyx.js propose apply enable-riskTolerance-controlled`
   - Note: CONTROLLED loosening changes require typing `APPLY` when prompted.
 - Governance:
-  - `node dist/clients/cli/auernyx.js governance self-test`
-  - `node dist/clients/cli/auernyx.js governance unlock`
+  - `node dist/cjs/clients/cli/auernyx.js governance self-test`
+  - `node dist/cjs/clients/cli/auernyx.js governance unlock`
 - Skjoldr:
-  - `node dist/clients/cli/auernyx.js skjoldr status`
-  - `node dist/clients/cli/auernyx.js skjoldr export-baseline`
-  - `node dist/clients/cli/auernyx.js skjoldr restore-baseline --snapshot <FILE> --hash <SHA256>`
-  - `node dist/clients/cli/auernyx.js skjoldr apply-profile <NAME>`
-  - `node dist/clients/cli/auernyx.js skjoldr apply-ruleset <FILE>`
+  - `node dist/cjs/clients/cli/auernyx.js skjoldr status`
+  - `node dist/cjs/clients/cli/auernyx.js skjoldr export-baseline`
+  - `node dist/cjs/clients/cli/auernyx.js skjoldr restore-baseline --snapshot <FILE> --hash <SHA256>`
+  - `node dist/cjs/clients/cli/auernyx.js skjoldr apply-profile <NAME>`
+  - `node dist/cjs/clients/cli/auernyx.js skjoldr apply-ruleset <FILE>`
 
 ### Option C — VS Code extension
 

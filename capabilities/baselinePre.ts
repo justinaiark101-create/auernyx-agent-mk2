@@ -1,9 +1,9 @@
-import type { RouterContext } from "../core/router";
-import { recordKnownGood } from "../core/knownGood";
+import type { RouterContext } from "../core/router.js";
+import { recordKnownGood } from "../core/knownGood.js";
 import * as fs from "fs";
 import * as path from "path";
-import { getApproverIdentity, getKintsugiPolicy, policyHash, snapshotPolicyAndActivate } from "../core/kintsugi/memory";
-import { recordKnownGoodSnapshot } from "../core/kintsugi/knownGood";
+import { getApproverIdentity, getKintsugiPolicy, policyHash, snapshotPolicyAndActivate } from "../core/kintsugi/memory.js";
+import { recordKnownGoodSnapshot } from "../core/kintsugi/knownGood.js";
 
 function readLedgerTailHash(repoRoot: string): string | undefined {
     const ledgerPath = path.join(repoRoot, "logs", "ledger.ndjson");

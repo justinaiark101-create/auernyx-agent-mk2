@@ -7,7 +7,7 @@ REM - Runs the CLI (daemon-first, local fallback)
 
 pushd "%~dp0"
 
-if not exist "dist\clients\cli\auernyx.js" (
+if not exist "dist\cjs\clients\cli\auernyx.js" (
   echo [Mk2] Build output missing. Compiling...
   call npm run compile
   if errorlevel 1 (
@@ -18,6 +18,6 @@ if not exist "dist\clients\cli\auernyx.js" (
   )
 )
 
-node dist\clients\cli\auernyx.js %*
+node dist\cjs\clients\cli\auernyx.js %*
 
 popd

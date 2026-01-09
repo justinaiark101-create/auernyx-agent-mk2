@@ -1,5 +1,5 @@
 import * as path from "path";
-import { isProtectedWorkspacePath } from "./kintsugi/protectedPaths";
+import { isProtectedWorkspacePath } from "./kintsugi/protectedPaths.js";
 
 export type RefusalReason =
     | "NO_AUTHORITY"

@@ -1,16 +1,12 @@
 // Router module for Mk2
 // Executes approved steps only, never thinks
 
-import { Step } from "./planner";
-import { PolicySnapshot } from "./policy";
-
-
-import { capabilityRequiresApproval, CapabilityName, getCapabilityMeta, Policy } from "./policy";
-import { Approval, ApprovalRequiredError, approvalIdentity, isValidApproval, isValidStepApproval, StepApproval } from "./approvals";
-import { loadConfig } from "./config";
-import { readGovernanceLock } from "./governanceLock";
-import { isJudgmentActive } from "./provenance";
-import type { PlanStep } from "./planner";
+import { capabilityRequiresApproval, CapabilityName, getCapabilityMeta, Policy } from "./policy.js";
+import { Approval, ApprovalRequiredError, approvalIdentity, isValidApproval, isValidStepApproval, StepApproval } from "./approvals.js";
+import { loadConfig } from "./config.js";
+import { readGovernanceLock } from "./governanceLock.js";
+import { isJudgmentActive } from "./provenance.js";
+import type { PlanStep } from "./planner.js";
 
 export interface Intent {
     raw: string;

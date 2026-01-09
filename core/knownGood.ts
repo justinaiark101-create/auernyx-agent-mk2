@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
-import { sha256FileHex } from "./integrity";
-import { guardedCopyFile, guardedMkdir, guardedWriteFileExclusive } from "./guardedFs";
+import { sha256FileHex } from "./integrity.js";
+import { guardedCopyFile, guardedMkdir, guardedWriteFileExclusive } from "./guardedFs.js";
 
 export type KnownGoodEntry = {
     kgsId: string;

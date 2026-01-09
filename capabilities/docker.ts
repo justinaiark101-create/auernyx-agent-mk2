@@ -1,4 +1,4 @@
-import type { RouterContext } from "../core/router";
+import type { RouterContext } from "../core/router.js";
 
 export async function docker(_ctx: RouterContext, _input?: unknown): Promise<{ ok: true }> {
     return { ok: true };

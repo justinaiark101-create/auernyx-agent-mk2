@@ -1,37 +1,37 @@
-import { capabilityRequiresApproval, createPolicy, getCapabilityMeta, loadAllowlist } from "./policy";
-import { createState } from "./state";
-import { Ledger } from "./ledger";
-import { createRouter, Router } from "./router";
-import { loadConfig } from "./config";
-import { ApprovalRequiredError, isValidApproval } from "./approvals";
+import { capabilityRequiresApproval, createPolicy, getCapabilityMeta, loadAllowlist } from "./policy.js";
+import { createState } from "./state.js";
+import { Ledger } from "./ledger.js";
+import { createRouter, Router } from "./router.js";
+import { loadConfig } from "./config.js";
+import { ApprovalRequiredError, isValidApproval } from "./approvals.js";
 
 import * as http from "http";
 import * as os from "os";
 import * as crypto from "crypto";
 
-import { scanRepo } from "../capabilities/scanRepo";
-import { searchDocPreview } from "../capabilities/searchDocPreview";
-import { searchDocApply } from "../capabilities/searchDocApply";
-import { fenerisPrep } from "../capabilities/fenerisPrep";
-import { baselinePre } from "../capabilities/baselinePre";
-import { baselinePost } from "../capabilities/baselinePost";
-import { docker } from "../capabilities/docker";
-import { memoryCheck } from "../capabilities/memoryCheck";
-import { proposeFixes } from "../capabilities/proposeFixes";
-import { governanceSelfTest } from "../capabilities/governanceSelfTest";
-import { governanceUnlock } from "../capabilities/governanceUnlock";
-import { rollbackKnownGood } from "../capabilities/rollbackKnownGood";
-import { skjoldrFirewallStatus } from "../capabilities/skjoldrFirewallStatus";
-import { skjoldrFirewallApplyProfile } from "../capabilities/skjoldrFirewallApplyProfile";
-import { skjoldrFirewallApplyRulesetFile } from "../capabilities/skjoldrFirewallApplyRulesetFile";
-import { skjoldrFirewallExportBaseline } from "../capabilities/skjoldrFirewallExportBaseline";
-import { skjoldrFirewallRestoreBaseline } from "../capabilities/skjoldrFirewallRestoreBaseline";
+import { scanRepo } from "../capabilities/scanRepo.js";
+import { searchDocPreview } from "../capabilities/searchDocPreview.js";
+import { searchDocApply } from "../capabilities/searchDocApply.js";
+import { fenerisPrep } from "../capabilities/fenerisPrep.js";
+import { baselinePre } from "../capabilities/baselinePre.js";
+import { baselinePost } from "../capabilities/baselinePost.js";
+import { docker } from "../capabilities/docker.js";
+import { memoryCheck } from "../capabilities/memoryCheck.js";
+import { proposeFixes } from "../capabilities/proposeFixes.js";
+import { governanceSelfTest } from "../capabilities/governanceSelfTest.js";
+import { governanceUnlock } from "../capabilities/governanceUnlock.js";
+import { rollbackKnownGood } from "../capabilities/rollbackKnownGood.js";
+import { skjoldrFirewallStatus } from "../capabilities/skjoldrFirewallStatus.js";
+import { skjoldrFirewallApplyProfile } from "../capabilities/skjoldrFirewallApplyProfile.js";
+import { skjoldrFirewallApplyRulesetFile } from "../capabilities/skjoldrFirewallApplyRulesetFile.js";
+import { skjoldrFirewallExportBaseline } from "../capabilities/skjoldrFirewallExportBaseline.js";
+import { skjoldrFirewallRestoreBaseline } from "../capabilities/skjoldrFirewallRestoreBaseline.js";
 
 import * as fs from "fs";
 import * as path from "path";
-import { getKintsugiPolicy, policyHash, verifyKintsugiIntegrity } from "./kintsugi/memory";
-import { runLifecycle } from "./runLifecycle";
-import { ensureGenesisRecord, verifyProvenance, activateJudgment, clearJudgment, appendProvenanceAudit } from "./provenance";
+import { getKintsugiPolicy, policyHash, verifyKintsugiIntegrity } from "./kintsugi/memory.js";
+import { runLifecycle } from "./runLifecycle.js";
+import { ensureGenesisRecord, verifyProvenance, activateJudgment, clearJudgment, appendProvenanceAudit } from "./provenance.js";
 
 function daemonLockPathForRepo(repoRoot: string): string {
     const normalized = path.resolve(repoRoot).toLowerCase();
@@ -1288,8 +1288,13 @@ function parseArgs(argv: string[]): { repoRoot?: string } {
     return {};
 }
 
-// If executed directly: `node dist/core/server.js [--root <path>]`
-if (require.main === module) {
+// If executed directly: `node dist/cjs/core/server.js [--root <path>]`
+const isDirectRun =
+    typeof require !== "undefined" &&
+    typeof module !== "undefined" &&
+    (require as any).main === module;
+
+if (isDirectRun) {
     const parsed = parseArgs(process.argv);
     const root = parsed.repoRoot ?? process.cwd();
     startDaemon(root);

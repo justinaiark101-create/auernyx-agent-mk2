@@ -1,7 +1,7 @@
-import type { RouterContext } from "../core/router";
-import { GovernanceRefusalError } from "../core/governanceRefusal";
-import { getApproverIdentity, getKintsugiPolicy, ledgerHasRecordHash, makeMfr, makeSnapshotHash, policyHash, recordFailure, recordHumanApprovedPolicyChange, verifyKintsugiIntegrity } from "../core/kintsugi/memory";
-import { listKnownGoodSnapshotsWithPaths, type KnownGoodSnapshotEntry } from "../core/kintsugi/knownGood";
+import type { RouterContext } from "../core/router.js";
+import { GovernanceRefusalError } from "../core/governanceRefusal.js";
+import { getApproverIdentity, getKintsugiPolicy, ledgerHasRecordHash, makeMfr, makeSnapshotHash, policyHash, recordFailure, recordHumanApprovedPolicyChange, verifyKintsugiIntegrity } from "../core/kintsugi/memory.js";
+import { listKnownGoodSnapshotsWithPaths, type KnownGoodSnapshotEntry } from "../core/kintsugi/knownGood.js";
 import * as fs from "fs";
 
 export type RollbackInput =

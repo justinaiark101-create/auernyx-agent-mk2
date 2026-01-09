@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
-import { getApproverIdentity, getLastLedgerRecord, makeMfr, makeSnapshotHash, recordFailure } from "./memory";
+import { getApproverIdentity, getLastLedgerRecord, makeMfr, makeSnapshotHash, recordFailure } from "./memory.js";
 
 const KINTSUGI_DIR = path.join(".auernyx", "kintsugi");
 const ENTRIES_DIR = path.join(KINTSUGI_DIR, "known_good", "entries");

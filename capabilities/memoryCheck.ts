@@ -1,8 +1,8 @@
-import type { RouterContext } from "../core/router";
-import { listKnownGood } from "../core/knownGood";
-import { verifyLedgerIntegrity } from "../core/integrity";
-import { getKintsugiPolicy, policyHash, verifyKintsugiIntegrity } from "../core/kintsugi/memory";
-import { listKnownGoodSnapshotsWithPaths } from "../core/kintsugi/knownGood";
+import type { RouterContext } from "../core/router.js";
+import { listKnownGood } from "../core/knownGood.js";
+import { verifyLedgerIntegrity } from "../core/integrity.js";
+import { getKintsugiPolicy, policyHash, verifyKintsugiIntegrity } from "../core/kintsugi/memory.js";
+import { listKnownGoodSnapshotsWithPaths } from "../core/kintsugi/knownGood.js";
 
 export async function memoryCheck(ctx: RouterContext, input?: unknown): Promise<unknown> {
     const maxEntries = typeof (input as any)?.maxEntries === "number" ? (input as any).maxEntries : undefined;

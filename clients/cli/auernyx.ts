@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-import { createCore } from "../../core/server";
-import { tryRunViaDaemon } from "../../core/daemonClient";
-import { createHumanApproval } from "../../core/approvals";
-import { capabilityRequiresApproval, CapabilityName, getCapabilityMeta } from "../../core/policy";
-import { runLifecycle } from "../../core/runLifecycle";
-import { loadConfig } from "../../core/config";
-import { planForIntent } from "../../core/planner";
+import { createCore } from "../../core/server.js";
+import { tryRunViaDaemon } from "../../core/daemonClient.js";
+import { createHumanApproval } from "../../core/approvals.js";
+import { capabilityRequiresApproval, CapabilityName, getCapabilityMeta } from "../../core/policy.js";
+import { runLifecycle } from "../../core/runLifecycle.js";
+import { loadConfig } from "../../core/config.js";
+import { planForIntent } from "../../core/planner.js";
 import * as readline from "readline";
 
 function planLooksReadOnly(plan: any): boolean {

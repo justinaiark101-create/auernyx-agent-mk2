@@ -2,8 +2,8 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { createHash, randomUUID } from "crypto";
-import { REASONS_VERSION, type RefusalReasonCode } from "./reasons";
-import { loadConfig } from "../config";
+import { REASONS_VERSION, type RefusalReasonCode } from "./reasons.js";
+import { loadConfig } from "../config.js";
 
 export type FailureType = "logic" | "data" | "execution" | "governance";
 export type RecoveryAction = "none" | "retry" | "override" | "rollback" | "compensate";

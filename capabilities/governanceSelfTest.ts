@@ -1,9 +1,9 @@
-import type { RouterContext } from "../core/router";
+import type { RouterContext } from "../core/router.js";
 import * as path from "path";
-import { guardedWriteFile } from "../core/guardedFs";
-import { GovernanceRefusalError } from "../core/governanceRefusal";
-import { readGovernanceLock, writeGovernanceLock } from "../core/governanceLock";
-import { recordRefusal, verifyKintsugiIntegrity } from "../core/kintsugi/memory";
+import { guardedWriteFile } from "../core/guardedFs.js";
+import { GovernanceRefusalError } from "../core/governanceRefusal.js";
+import { readGovernanceLock, writeGovernanceLock } from "../core/governanceLock.js";
+import { recordRefusal, verifyKintsugiIntegrity } from "../core/kintsugi/memory.js";
 
 function illegalTarget(repoRoot: string): string {
     return path.join(repoRoot, ".auernyx", "kintsugi", "ledger", "records", "SELFTEST_DO_NOT_WRITE.txt");

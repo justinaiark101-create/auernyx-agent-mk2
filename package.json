@@ -6,13 +6,20 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "main": "./dist/clients/vscode/extension.js",
+  "main": "./dist/cjs/clients/vscode/extension.js",
   "activationEvents": [
     "onStartupFinished"
   ],
   "bin": {
-    "auernyx": "./dist/clients/cli/auernyx.js",
-    "auernyx-daemon": "./dist/clients/cli/auernyx-daemon.js"
+    "auernyx": "./dist/cjs/clients/cli/auernyx.js",
+    "auernyx-daemon": "./dist/cjs/clients/cli/auernyx-daemon.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/cjs/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    }
   },
   "contributes": {
     "commands": [
@@ -47,9 +54,13 @@
     "webpack-cli": "^6.0.1"
     },
   "scripts": {
-    "compile": "tsc -p ./",
-    "cli": "node ./dist/clients/cli/auernyx.js",
-    "daemon": "node ./dist/clients/cli/auernyx-daemon.js",
+    "typecheck": "tsc -p ./ --noEmit",
+    "compile:cjs": "tsc -p ./tsconfig.cjs.json",
+    "compile:esm": "tsc -p ./tsconfig.esm.json",
+    "compile": "npm run compile:cjs && npm run compile:esm && node ./tools/write-dist-package-json.mjs",
+    "verify": "npm run typecheck && npm run compile && node ./dist/cjs/clients/cli/auernyx.js memory --reason \"verify\" --no-daemon && node ./dist/esm/clients/cli/auernyx.js memory --reason \"verify\" --no-daemon && node ./dist/cjs/clients/cli/auernyx.js scan . --reason \"verify\" --no-daemon && node ./dist/esm/clients/cli/auernyx.js scan . --reason \"verify\" --no-daemon",
+    "cli": "node ./dist/cjs/clients/cli/auernyx.js",
+    "daemon": "node ./dist/cjs/clients/cli/auernyx-daemon.js",
     "assets:resize": "node ./tools/make-ico.js --resize-only --keep-temp",
     "assets:ico": "node ./tools/make-ico.js",
     "assets:icon": "npm run assets:ico",
@@ -61,5 +72,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module"
+  "type": "commonjs"
 }

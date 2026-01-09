@@ -1,6 +1,6 @@
-import type { RouterContext } from "../core/router";
+import type { RouterContext } from "../core/router.js";
 import * as fs from "fs";
-import { getSkjoldrFirewallStatus, runSkjoldrJsonCommand } from "../core/skjoldrFirewall";
+import { getSkjoldrFirewallStatus, runSkjoldrJsonCommand } from "../core/skjoldrFirewall.js";
 
 export interface SkjoldrApplyRulesetFileInput {
     rulesetPath: string;

@@ -1,7 +1,7 @@
-import type { RouterContext } from "../core/router";
+import type { RouterContext } from "../core/router.js";
 import * as fs from "fs";
-import { sha256FileHex } from "../core/integrity";
-import { getSkjoldrFirewallStatus, runSkjoldrJsonCommand } from "../core/skjoldrFirewall";
+import { sha256FileHex } from "../core/integrity.js";
+import { getSkjoldrFirewallStatus, runSkjoldrJsonCommand } from "../core/skjoldrFirewall.js";
 
 function extractSnapshotPath(env: any): string | undefined {
     const candidates = [env?.snapshot_path, env?.snapshotPath, env?.path, env?.file, env?.snapshot];
