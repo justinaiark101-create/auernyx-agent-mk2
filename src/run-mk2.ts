@@ -1,7 +1,6 @@
 // Headless CLI runner for Mk2 governance kernel
 // Usage: node dist/run-mk2.js "intent string"
 
-import path from "path";
 import { legitimacyCheck } from "./core/legitimacyGate.js";
 import { createPlan } from "./core/planner.js";
 import { loadActivePolicy, snapshotPolicy, evaluatePlan } from "./core/policy.js";
