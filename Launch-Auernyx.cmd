@@ -98,7 +98,13 @@ exit /b 0
 echo.
 echo [Mk2] Starting headless daemon...
 if not defined AUERNYX_UI_URL set "AUERNYX_UI_URL=http://127.0.0.1:43117/ui"
-start "Auernyx Mk2 Daemon" cmd /c "\"%~dp0Start-Mk2.cmd\""
+echo [Mk2] If the daemon window closes immediately, re-run from an existing terminal to see the error:
+echo [Mk2]   Launch-Auernyx.cmd --headless
+echo.
+REM Use cmd /k so the daemon window stays open even if startup fails.
+start "Auernyx Mk2 Daemon" cmd /k ""%~dp0Start-Mk2.cmd""
+REM Give the daemon a moment to bind before opening the UI.
+timeout /t 2 >nul
 echo [Mk2] Opening Web UI: %AUERNYX_UI_URL%
 start "Auernyx Mk2 UI" "%AUERNYX_UI_URL%"
 popd

@@ -27,4 +27,5 @@ See `docs/MILESTONE_20260105.md` for details.
 - Fixed volatility handshake validation for JSON Schema draft 2020-12 by using Ajv’s 2020 build (prevents “no schema with key or ref …/draft/2020-12/schema”).
 - Pruned merged/closed branches from origin: `branches/kotlin-consumer-hostile`, `copilot/nitpick-remove-unused-parameter`.
 - Pruned stale remote refs after merges: `dependabot/npm_and_yarn/types/node-25.0.5`, `dependabot/npm_and_yarn/types/vscode-1.108.1`, `trunk/mk2-alteration-program`.
+- Fixed `Launch-Auernyx.cmd` headless mode so the daemon window stays open on startup errors (improves debuggability when the UI can't connect).
 
