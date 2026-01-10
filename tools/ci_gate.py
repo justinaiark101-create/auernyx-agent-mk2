@@ -116,12 +116,12 @@ def assert_append_only_trace_files(changed_files: list[str], base_ref: str | Non
         if base_ref:
             try:
                 base_text = run(["git", "-C", str(GIT_ROOT), "show", f"{base_ref}:{rel_norm}"])
-            except Exception:
+            except BaseException:
                 base_text = ""
         else:
             try:
                 base_text = run(["git", "-C", str(GIT_ROOT), "show", f"HEAD:{rel_norm}"])
-            except Exception:
+            except BaseException:
                 base_text = ""
 
         base_bytes = normalize_newlines(base_text.encode("utf-8", errors="replace"))
@@ -173,7 +173,7 @@ def main():
                 new_am = intent.get("amendments", []) or []
                 if len(new_am) <= len(base_am):
                     raise SystemExit("Fail-closed: modifying a closed intent requires adding an amendments[] entry.")
-        except Exception:
+        except BaseException:
             pass
 
     print("Mk2 Alteration Gate: PASS")
