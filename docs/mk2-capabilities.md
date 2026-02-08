@@ -460,12 +460,22 @@ For inspection without opening files, the daemon exposes `GET /ledger`.
 
 ---
 
-## Where the “Compiled Output” Goes
+## Build Artifacts: What `npm run compile` Produces
 
-TypeScript compilation produces:
-- `.js` (runtime)
-- `.d.ts` (type declarations)
-- `.js.map` (source maps)
+The TypeScript build process (`npm run compile`) produces compiled JavaScript artifacts in the `dist/` directory.
 
-All emitted under:
+### Artifact Types
+- **`.js`** — Executable JavaScript (runtime code)
+- **`.d.ts`** — TypeScript type declarations
+- **`.js.map`** — Source maps for debugging
+
+### Output Location
+All compiled artifacts are emitted to:
 - `dist/`
+
+### Key Entry Points
+- `dist/clients/vscode/extension.js` — VS Code extension
+- `dist/clients/cli/auernyx.js` — CLI client  
+- `dist/clients/cli/auernyx-daemon.js` — Daemon server
+
+**Note**: This describes the **build output** (compiled artifacts). For information about **runtime execution modes** (daemon vs local), see the "Governance Posture" section above.
