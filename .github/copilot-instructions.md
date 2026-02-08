@@ -1,7 +1,7 @@
 # Copilot Instructions: Auernyx Agent Mk2
 
 ## Project Overview
-**Auernyx Agent Mk2** is a governed AI orchestrator with strict policy enforcement and tamper-evident audit trails. It is a TypeScript/Node.js daemon-first system that separates reasoning (Aeurnyx), execution (controlled capabilities), and audit (Kintsugi ledger). This is NOT a VS Code extension—it's editor-agnostic with daemon-based operation.
+**Auernyx Agent Mk2** is a governed AI orchestrator with strict policy enforcement and tamper-evident audit trails. It is a TypeScript/Node.js daemon-first system that separates reasoning (Auernyx), execution (controlled capabilities), and audit (Kintsugi ledger). This is NOT a VS Code extension—it's editor-agnostic with daemon-based operation.
 
 **Key Characteristics:**
 - **Type**: Governed control plane with MCP execution architecture
