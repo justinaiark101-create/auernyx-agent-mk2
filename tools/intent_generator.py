@@ -195,6 +195,13 @@ def infer_scope_from_commit(commit_info: Dict) -> Dict[str, List[str]]:
     }
 
 
+def truncate_title(title: str, max_length: int = 160) -> str:
+    """Truncate title to max length, adding ellipsis if needed."""
+    if len(title) <= max_length:
+        return title
+    return title[:max_length - 3] + "..."
+
+
 def generate_intent_from_commit(commit_sha: str, actor_id: str = "intent-generator") -> Optional[Dict]:
     """Generate a complete intent JSON from a commit."""
     commit_info = get_commit_info(commit_sha)
@@ -215,7 +222,7 @@ def generate_intent_from_commit(commit_sha: str, actor_id: str = "intent-generat
     # Build intent
     intent = {
         "intentId": intent_id,
-        "title": commit_info["subject"][:160] if len(commit_info["subject"]) <= 160 else commit_info["subject"][:157] + "...",
+        "title": truncate_title(commit_info["subject"]),
         "system": "auernyx-agent-mk2",
         "changeClass": change_class,
         "scope": scope,

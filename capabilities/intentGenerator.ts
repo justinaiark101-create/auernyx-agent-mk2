@@ -2,14 +2,39 @@ import type { RouterContext } from "../core/router";
 import { execFileSync } from "child_process";
 import * as path from "path";
 
+interface IntentGeneratorParams {
+    commitSha?: string;
+    scan?: boolean;
+    actorId?: string;
+}
+
+function isIntentGeneratorParams(obj: unknown): obj is IntentGeneratorParams {
+    if (typeof obj !== "object" || obj === null) {
+        return false;
+    }
+    const params = obj as Record<string, unknown>;
+    return (
+        (params.commitSha === undefined || typeof params.commitSha === "string") &&
+        (params.scan === undefined || typeof params.scan === "boolean") &&
+        (params.actorId === undefined || typeof params.actorId === "string")
+    );
+}
+
 export async function intentGenerator(ctx: RouterContext, input?: unknown): Promise<unknown> {
     const scriptPath = path.join(ctx.repoRoot, "tools", "intent_generator.py");
     
-    // Type guard and extract parameters
-    const params = input as any || {};
-    const commitSha = params.commitSha as string | undefined;
-    const scan = params.scan as boolean | undefined;
-    const actorId = (params.actorId as string) || "intent-generator";
+    // Validate and extract parameters with type guard
+    if (input !== undefined && !isIntentGeneratorParams(input)) {
+        return {
+            ok: false,
+            error: "Invalid input parameters. Expected: { commitSha?: string, scan?: boolean, actorId?: string }"
+        };
+    }
+    
+    const params = (input || {}) as IntentGeneratorParams;
+    const commitSha = params.commitSha;
+    const scan = params.scan;
+    const actorId = params.actorId || "intent-generator";
     
     const args: string[] = [scriptPath];
     
