@@ -194,7 +194,7 @@ From `docs/mk2-governance-law.md`:
 During comprehensive code review, NO malicious patterns were found:
 - ✅ No hardcoded secrets or API keys
 - ✅ No eval() or unsafe dynamic code execution
-- ✅ Controlled use of child_process (only in skjoldrFirewall.ts with validated paths)
+- ✅ Controlled use of child_process/execFileSync in limited modules (e.g., skjoldrFirewall.ts, core/git.ts, tools/make-ico.js) with validated inputs and explicit arguments
 - ✅ Git operations use execFileSync with explicit arguments
 - ✅ Environment-based secrets (AUERNYX_SECRET) properly handled
 - ✅ All write operations are write-gated: `AUERNYX_WRITE_ENABLED` (env) takes precedence, otherwise `config/auernyx.config.json` must set `writeEnabled: true`
