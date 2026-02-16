@@ -45,7 +45,6 @@ jobs:
             const exitCode = '${{ steps.auernyx-analysis.outputs.exit_code }}';
             const analysisStatus = exitCode === '0' ? '✅ Success' : `⚠️ Failed (exit code: ${exitCode})`;
 
-
             const body = [
               '## Auernyx dependency analysis (scaffold)',
               '',
