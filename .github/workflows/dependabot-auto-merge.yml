@@ -1,0 +1,39 @@
+name: dependabot-auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  auto-merge-patch:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge for patch updates only
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = (pr.title || '').toLowerCase();
+            const isPatchSignal = title.includes(' bump ') && title.includes(' from ') && title.includes(' to ');
+            const isSecuritySignal = title.includes('security') || title.includes('vulnerability');
+
+            if (!isPatchSignal || isSecuritySignal) {
+              core.info('Skipping auto-merge: not a plain patch-style bump title or indicates security escalation requiring review.');
+              return;
+            }
+
+            await github.graphql(
+              `mutation($pullRequestId: ID!) {
+                 enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: SQUASH}) {
+                   clientMutationId
+                 }
+               }`,
+              { pullRequestId: pr.node_id }
+            );
+
+            core.info('Auto-merge enabled for Dependabot patch-style update.');

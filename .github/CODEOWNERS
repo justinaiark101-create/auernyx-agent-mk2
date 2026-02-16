@@ -1,0 +1,9 @@
+# Default owner
+* @ghostwolf101
+
+# Governance and automation lock-down
+/.github/ @ghostwolf101
+/config/ @ghostwolf101
+/core/ @ghostwolf101
+/capabilities/ @ghostwolf101
+/governance/ @ghostwolf101

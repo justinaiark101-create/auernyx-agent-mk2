@@ -1,0 +1,56 @@
+name: auernyx-dependency-review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  analyze-dependency-pr:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CLI
+        run: npm run compile
+
+      - name: Run Auernyx dependency analysis scaffold
+        run: |
+          node ./dist/clients/cli/auernyx.js "analyze dependency" --no-daemon --reason "dependabot scaffold analysis" || true
+
+      - name: Comment analysis integration points
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              '## Auernyx dependency analysis (scaffold)',
+              '',
+              '- Capability: `analyzeDependency` (read-only scaffold)',
+              '- npm registry integration point: `capabilities/analyzeDependency.ts`',
+              '- security advisory integration point: `capabilities/analyzeDependency.ts`',
+              '- breaking-change and risk scoring integration point: `capabilities/analyzeDependency.ts`',
+              '- governance evidence: ledger events emitted by capability',
+              '',
+              'This workflow is scaffold-only and intended for iterative hardening.'
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body
+            });

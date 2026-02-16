@@ -17,6 +17,7 @@
     "skjoldrFirewallApplyRulesetFile",
     "skjoldrFirewallExportBaseline",
     "skjoldrFirewallRestoreBaseline",
+    "analyzeDependency",
     "docker"
   ]
 }
