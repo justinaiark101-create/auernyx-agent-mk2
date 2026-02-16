@@ -4,10 +4,10 @@
   "actorId": "copilot-swe-agent",
   "system": "auernyx-agent-mk2",
   "title": "Clarify built artifacts vs runtime execution states in documentation",
-  "description": "Separate documentation of build output (compiled artifacts) from runtime execution states (daemon vs local) to prevent confusion between these distinct concepts.",
   "changeClass": "leaf",
   "riskClass": "low",
   "governanceImpact": false,
+  "status": "in_review",
   "scope": {
     "in": [
       "Documentation clarification in docs/AGENT_INDEPENDENCE.md",
@@ -30,20 +30,6 @@
     "required": false,
     "receiptRefs": [],
     "notes": "Documentation-only change to clarify distinction between build artifacts (dist/ output from npm run compile) and runtime execution states (daemon vs local fallback). This addresses confusion about 'built states' by separating these two distinct concepts in the documentation."
-  },
-  "deferral": {
-    "allowed": false,
-    "reason": "Documentation clarity is immediate requirement for proper understanding"
-  },
-  "rollback": {
-    "plan": "Revert documentation changes via git revert",
-    "blastRadius": "Documentation only - no runtime impact"
-  },
-  "approvals": {
-    "requiredReviewers": [
-      "ghostwolf101"
-    ],
-    "signoff": []
   },
   "amendments": []
 }
