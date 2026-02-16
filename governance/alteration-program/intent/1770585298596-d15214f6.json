@@ -9,19 +9,15 @@
   "riskClass": "low",
   "governanceImpact": false,
   "scope": {
-    "inScope": [
-      "Documentation clarification in AGENT_INDEPENDENCE.md",
-      "Documentation clarification in mk2-capabilities.md",
+    "in": [
+      "Documentation clarification in docs/AGENT_INDEPENDENCE.md",
+      "Documentation clarification in docs/mk2-capabilities.md",
       "Separation of 'build artifacts' vs 'runtime execution states' concepts"
     ],
-    "outOfScope": [
+    "out": [
       "Code changes",
       "Build process modifications",
       "Runtime behavior changes"
-    ],
-    "touchPoints": [
-      "docs/AGENT_INDEPENDENCE.md",
-      "docs/mk2-capabilities.md"
     ]
   },
   "verification": {
