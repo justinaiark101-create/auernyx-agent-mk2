@@ -138,8 +138,9 @@ Files Changed:
         evidence_notes += f"\n... and {len(commit_info['changed_files']) - 20} more files"
     
     # Truncate if too long (max 2000 chars per schema)
-    if len(evidence_notes) > 1900:
-        evidence_notes = evidence_notes[:1900] + "\n...(truncated)"
+    # Check after all content is added
+    if len(evidence_notes) > 2000:
+        evidence_notes = evidence_notes[:1997] + "..."
     
     # Build intent
     intent = {

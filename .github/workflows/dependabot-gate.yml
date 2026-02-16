@@ -14,16 +14,24 @@ permissions:
 
 jobs:
   generate-intent:
-    # Only run for Dependabot PRs
-    if: ${{ github.actor == 'dependabot[bot]' }}
+    # Only run for Dependabot PRs from this repository (not forks)
+    # Skip if the last commit was made by github-actions[bot] to prevent infinite loops
+    if: |
+      github.actor == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.user.login != 'github-actions[bot]'
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout PR branch
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
+      
+      - name: Checkout PR head branch
+        run: |
+          git fetch origin "${{ github.event.pull_request.head.ref }}:${{ github.event.pull_request.head.ref }}"
+          git checkout "${{ github.event.pull_request.head.ref }}"
       
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -53,7 +61,14 @@ jobs:
             --commit "$HEAD_SHA" \
             --actor-id "dependabot-automation"
           
-          echo "Intent file generated for commit $HEAD_SHA"
+          # Update intent status from "draft" to "in_review" for automated processing
+          INTENT_FILE=$(ls governance/alteration-program/intent/*.json | tail -1)
+          if [ -f "$INTENT_FILE" ]; then
+            sed -i 's/"status": "draft"/"status": "in_review"/' "$INTENT_FILE"
+            echo "Intent file generated and updated to in_review status: $INTENT_FILE"
+          else
+            echo "Intent file generated for commit $HEAD_SHA"
+          fi
       
       - name: Commit intent file
         if: steps.check-intent.outputs.intent_count == '0'
@@ -84,9 +99,10 @@ jobs:
               repo: context.repo.repo,
               body: '🤖 **Governance Intent Generated**\n\n' +
                     'An intent file has been automatically generated for this Dependabot update. ' +
-                    'The PR now includes the required governance documentation.\n\n' +
+                    'The intent status has been set to `in_review` and the PR now includes the required governance documentation.\n\n' +
                     '**Next Steps:**\n' +
                     '- Review the generated intent file\n' +
+                    '- Update status to `approved` if changes look good\n' +
                     '- Ensure the mk2-alteration-gate check passes\n' +
                     '- Merge when all checks are green'
             })
