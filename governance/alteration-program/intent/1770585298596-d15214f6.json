@@ -8,6 +8,7 @@
   "changeClass": "leaf",
   "riskClass": "low",
   "governanceImpact": false,
+  "status": "in_review",
   "scope": {
     "in": [
       "Documentation clarification in docs/AGENT_INDEPENDENCE.md",
