@@ -143,7 +143,22 @@ This delegation is for **shared state** benefits (single ledger, shared session)
 
 ## Build Configuration
 
-### package.json
+### Build Process (One Build, Multiple Artifacts)
+
+Mk2 uses a **single build command** that produces **multiple artifacts**:
+
+```bash
+npm run compile
+```
+
+This compiles TypeScript source to JavaScript artifacts in `dist/`:
+- `dist/clients/vscode/extension.js` — VS Code extension entry point
+- `dist/clients/cli/auernyx.js` — CLI client entry point
+- `dist/clients/cli/auernyx-daemon.js` — Daemon server entry point
+
+**Key point**: While there is only **one build process**, it produces **three separate entry points** for the different client types.
+
+### package.json Entry Points
 ```json
 {
   "main": "./dist/clients/vscode/extension.js",
@@ -154,15 +169,20 @@ This delegation is for **shared state** benefits (single ledger, shared session)
 }
 ```
 
-### Single Build, Multiple Targets
-```bash
-npm run compile
-```
+### Build vs Runtime: Two Distinct Concepts
 
-Compiles all clients to `dist/`:
-- `dist/clients/vscode/extension.js` — VS Code extension
-- `dist/clients/cli/auernyx.js` — CLI client
-- `dist/clients/cli/auernyx-daemon.js` — Daemon server
+**Build artifacts** (what `npm run compile` produces):
+- Compiled JavaScript files in `dist/`
+- Type declarations (`.d.ts`)
+- Source maps (`.js.map`)
+- All three clients compiled from shared `core/` and `capabilities/`
+
+**Runtime execution states** (how the agents run):
+- **Daemon mode**: Server running at `127.0.0.1:43117`
+- **Local execution**: CLI/extension running capabilities in-process
+- **Delegation**: CLI/extension delegating to daemon
+
+The build is **unified**. The runtime states are **independent and optional**.
 
 ## Usage Examples
 
