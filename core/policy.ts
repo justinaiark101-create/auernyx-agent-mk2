@@ -26,7 +26,8 @@ export type CapabilityName =
     | "skjoldrFirewallApplyProfile"
     | "skjoldrFirewallApplyRulesetFile"
     | "skjoldrFirewallExportBaseline"
-    | "skjoldrFirewallRestoreBaseline";
+    | "skjoldrFirewallRestoreBaseline"
+    | "analyzeDependency";
 
 export type CapabilityTier = 0 | 1 | 2;
 
@@ -61,7 +62,9 @@ const CAPABILITY_META: Record<CapabilityName, CapabilityMeta> = {
     skjoldrFirewallApplyProfile: { name: "skjoldrFirewallApplyProfile", readOnly: false, tier: 2 },
     skjoldrFirewallApplyRulesetFile: { name: "skjoldrFirewallApplyRulesetFile", readOnly: false, tier: 2 },
     skjoldrFirewallExportBaseline: { name: "skjoldrFirewallExportBaseline", readOnly: false, tier: 2 },
-    skjoldrFirewallRestoreBaseline: { name: "skjoldrFirewallRestoreBaseline", readOnly: false, tier: 2 }
+    skjoldrFirewallRestoreBaseline: { name: "skjoldrFirewallRestoreBaseline", readOnly: false, tier: 2 },
+
+    analyzeDependency: { name: "analyzeDependency", readOnly: true, tier: 0 }
 };
 
 export function getCapabilityMeta(name: CapabilityName): CapabilityMeta {
@@ -117,6 +120,7 @@ const DEFAULT_ALLOWLIST: AllowlistConfig = {
         "skjoldrFirewallApplyRulesetFile",
         "skjoldrFirewallExportBaseline",
         "skjoldrFirewallRestoreBaseline",
+        "analyzeDependency",
         "docker"
     ]
 };

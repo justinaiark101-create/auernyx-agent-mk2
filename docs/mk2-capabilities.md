@@ -95,6 +95,10 @@ Important: `.auernyx/kintsugi/` is a protected path. Governed mutations must ref
 - `skjoldrFirewallApplyRulesetFile` — apply a ruleset file (mutating)
 - `skjoldrFirewallExportBaseline` — export baseline
 - `skjoldrFirewallRestoreBaseline` — restore baseline
+- `analyzeDependency` — dependency risk analysis scaffold (read-only)
+  - This capability is read-only, but changes to Mk2 itself (including this capability and its configuration) are governed by the alteration program.
+  - Every non-Dependabot PR must include **exactly one** intent JSON file under `governance/alteration-program/intent/` with filename `<intentId>.json` where `<intentId>` has the form `13digits-8hex` and matches the `intentId` field inside the file.
+  - You can generate an intent file for a commit with: `python3 tools/intent_generator.py --commit <sha>`, then add the resulting file to `governance/alteration-program/intent/` as part of your PR.
 
 ---
 
@@ -112,6 +116,7 @@ Routing is simple and deterministic:
 - Contains `governance` + `unlock` → `governanceUnlock`
 - Contains `rollback` / `known good` / `kgs` → `rollbackKnownGood`
 - Contains `skjoldr` or `firewall` → routes to the matching Skjoldr capability based on `status`/`apply`/`export baseline`/`restore baseline`
+- Contains both `analyze` and `dependency` → `analyzeDependency`
 - Contains `docker` → `docker`
 
 If nothing matches, the intent is “unroutable”.
@@ -442,7 +447,7 @@ Notes:
 
 Current tiers (policy metadata):
 
-- Tier 0 (read-only): `scanRepo`
+- Tier 0 (read-only): `scanRepo`, `analyzeDependency`
 - Tier 1 (mutating, approval required): `fenerisPrep`, `baselinePre`, `baselinePost`
 - Tier 2 (high-risk, approval required): `docker`
 

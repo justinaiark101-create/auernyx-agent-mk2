@@ -162,6 +162,19 @@ Behavior:
 - `step-2` requires explicit approval with `confirm=APPLY`.
 - The receipt captures the preview/apply outputs, including before/after hashes.
 
+
+### Dependency governance scaffold (Dependabot + Auernyx)
+
+This repository now includes a dependency-review scaffold for governed Dependabot handling:
+
+- `capabilities/analyzeDependency.ts` — read-only dependency analysis capability scaffold
+- `.github/workflows/auernyx-dependency-review.yml` — runs scaffold logic for Dependabot PRs
+- `.github/workflows/dependabot-auto-merge.yml` — constrained Dependabot auto-merge flow
+- `.github/PULL_REQUEST_TEMPLATE/dependabot.md` — dependency review checklist
+- `docs/auernyx-dependency-analysis.md` and `docs/dependency-review-integration.md` — architecture + integration references
+
+Route dependency analysis intent via CLI/daemon text like: `analyze dependency`.
+
 ### Governance law (invariants)
 
 The invariants that define Mk2’s governance model are documented here:

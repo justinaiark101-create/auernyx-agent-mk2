@@ -27,6 +27,7 @@ import { skjoldrFirewallApplyProfile } from "../capabilities/skjoldrFirewallAppl
 import { skjoldrFirewallApplyRulesetFile } from "../capabilities/skjoldrFirewallApplyRulesetFile";
 import { skjoldrFirewallExportBaseline } from "../capabilities/skjoldrFirewallExportBaseline";
 import { skjoldrFirewallRestoreBaseline } from "../capabilities/skjoldrFirewallRestoreBaseline";
+import { analyzeDependency } from "../capabilities/analyzeDependency";
 
 import * as fs from "fs";
 import * as path from "path";
@@ -138,7 +139,8 @@ export function createCore(repoRoot: string): AuernyxCore {
         skjoldrFirewallApplyProfile,
         skjoldrFirewallApplyRulesetFile,
         skjoldrFirewallExportBaseline,
-        skjoldrFirewallRestoreBaseline
+        skjoldrFirewallRestoreBaseline,
+        analyzeDependency
     });
 
     ledger.append(state.sessionId, "core.start", { repoRoot, provenance: prov.ok ? "PASS" : "FAIL" });
