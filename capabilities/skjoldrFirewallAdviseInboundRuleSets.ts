@@ -34,7 +34,7 @@ function parseInput(input: unknown): SkjoldrAdviseInboundRuleSetsInput {
     return result;
 }
 
-function analyzeFirewallStatus(statusData: any): RulesetAdvice[] {
+function analyzeFirewallStatus(statusData: unknown): RulesetAdvice[] {
     const advice: RulesetAdvice[] = [];
     
     // Analyze the firewall status and provide recommendations

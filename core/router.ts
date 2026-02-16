@@ -138,7 +138,7 @@ export function createRouter(policy: Policy, capabilities: Record<CapabilityName
                     return "skjoldrFirewallApplyRulesetFile";
                 }
                 if (text.includes("advise") || text.includes("advice") || text.includes("recommend")) {
-                    if (text.includes("inbound") || text.includes("ib") || text.includes("rule")) {
+                    if (text.includes("inbound") || text.includes("ib")) {
                         return "skjoldrFirewallAdviseInboundRuleSets";
                     }
                 }
