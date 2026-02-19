@@ -1,29 +1,22 @@
 #!/bin/bash
-set -euo pipefail
 
-# Ensure that dist/clients/cli/auernyx.js exists
-if [ ! -f "dist/clients/cli/auernyx.js" ]; then
-  echo "dist/clients/cli/auernyx.js is missing!"
-  exit 1
+# Log file path with current date and short SHA
+LOG_FILE=logs/audit/weekly-audit_2026-02-19_593a5a2.txt
+
+# Print START header
+echo "START of Weekly Audit" | tee -a $LOG_FILE
+
+# Fail-closed if auernyx.js is missing
+if [ ! -f dist/clients/cli/auernyx.js ]; then
+    echo "Error: dist/clients/cli/auernyx.js is missing. Failing..." | tee -a $LOG_FILE
+    exit 1
 fi
 
-# Run the CI gate script
-python3 tools/ci_gate.py
+# Existing steps
+python ci_gate.py | tee -a $LOG_FILE
+npm run verify | tee -a $LOG_FILE
+node dist/clients/cli/auernyx.js memory --reason "weekly audit" --no-daemon | tee -a $LOG_FILE
+git log --since "7 days ago" --name-status | tee -a $LOG_FILE
 
-# Run npm verify
-npm run verify
-
-# Run the memory check
-node dist/clients/cli/auernyx.js memory --reason "weekly audit" --no-daemon
-
-# Print whether AUERNYX_SECRET is set
-if [ -z "${AUERNYX_SECRET+x}" ]; then
-  echo "AUERNYX_SECRET is not set"
-else
-  echo "AUERNYX_SECRET is set"
-fi
-
-# Log the last 7 days of git changes
-git log --since "7 days ago" --name-status
-
-# Write PASS/FAIL summary
+# Print PASS footer
+echo "PASS" | tee -a $LOG_FILE
