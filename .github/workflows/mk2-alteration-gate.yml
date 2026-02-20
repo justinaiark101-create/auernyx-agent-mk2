@@ -26,4 +26,7 @@ jobs:
           echo "MK2_BASE_REF=${BASE_SHA}" >> $GITHUB_ENV
 
       - name: Run alteration gate (fail-closed)
+        # Passes automatically when there are no changed files (no-op diff).
+        # When changes are present, requires exactly ONE authorization record under
+        # governance/alteration-program/authorization/records/ with authorizedBy == "jason".
         run: python3 tools/ci_gate.py

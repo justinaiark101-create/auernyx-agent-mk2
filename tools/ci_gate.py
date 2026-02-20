@@ -29,6 +29,9 @@ ALLOWLIST_PATH = REPO_ROOT / "governance/alteration-program/authorization/allowl
 
 GITHUB_LOGIN_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
 
+# Exact approver required on every authorization record.
+REQUIRED_APPROVER = "jason"
+
 def fail(msg: str) -> None:
     raise SystemExit(f"Fail-closed: {msg}")
 
@@ -74,6 +77,8 @@ def validate_auth_record(record_path: str) -> None:
     authorized_by = record["authorizedBy"]
     if not isinstance(authorized_by, str) or not GITHUB_LOGIN_RE.match(authorized_by):
         fail(f"authorizedBy must be a valid GitHub login (got {authorized_by!r}) in {record_path}")
+    if authorized_by != REQUIRED_APPROVER:
+        fail(f"authorizedBy must be '{REQUIRED_APPROVER}' (got {authorized_by!r}) in {record_path}")
 
     authorized_at = record["authorizedAt"]
     if not isinstance(authorized_at, str):
@@ -166,6 +171,11 @@ def main():
     else:
         files, source = get_working_files()
         append_only_base = None
+
+    # No-op: if there are no changed files, the gate passes automatically.
+    if not files:
+        print("Mk2 Alteration Gate: PASS (no-op diff, no changes detected)")
+        return
 
     assert_append_only_trace_files(files, append_only_base)
 
