@@ -18,14 +18,12 @@ jobs:
 
       - name: Fetch base
         run: |
-          echo "MK2_BASE_REF=origin/${{ github.base_ref }}" >> $GITHUB_ENV
-          git fetch origin ${{ github.base_ref }} --depth=1
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          echo "Base ref: ${{ github.base_ref }}, SHA: ${BASE_SHA}"
+          git fetch origin ${{ github.base_ref }}
+          git rev-parse "${BASE_SHA}"
+          git merge-base "${BASE_SHA}" HEAD
+          echo "MK2_BASE_REF=${BASE_SHA}" >> $GITHUB_ENV
 
       - name: Run alteration gate (fail-closed)
-        run: |
-          python3 tools/ci_gate.py
-{
-  "authorizedBy": "Ghostwolf101",
-  "authorizedAt": "2026-02-20",
-  "reason": "Authorize PR #63 changes (weekly-audit.ps1: fail-closed LASTEXITCODE guards)."
-}
+        run: python3 tools/ci_gate.py
