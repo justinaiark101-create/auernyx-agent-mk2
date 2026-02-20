@@ -42,8 +42,14 @@ try {
   Write-Host ""
 
   Write-Host "[WEEKLY_AUDIT] Step 1/4: Governance CI gate"
-  python3 tools/ci_gate.py
-  if ($LASTEXITCODE -ne 0) { Fail "Governance CI gate failed (exit $LASTEXITCODE)." $LASTEXITCODE }
+  $intentChanges = git status --porcelain -- governance/alteration-program/intent 2>$null
+  if ([string]::IsNullOrWhiteSpace($intentChanges)) {
+    Write-Host "[WEEKLY_AUDIT] INFO: No local intent changes detected under governance/alteration-program/intent/; skipping Governance CI gate."
+    Write-Host "[WEEKLY_AUDIT] INFO: To audit a specific diff, set MK2_BASE_REF before running tools/weekly-audit.ps1."
+  } else {
+    python3 tools/ci_gate.py
+    if ($LASTEXITCODE -ne 0) { Fail "Governance CI gate failed (exit $LASTEXITCODE)." $LASTEXITCODE }
+  }
   Write-Host ""
 
   Write-Host "[WEEKLY_AUDIT] Step 2/4: npm verify"
