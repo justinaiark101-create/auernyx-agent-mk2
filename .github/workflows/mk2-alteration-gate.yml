@@ -27,6 +27,6 @@ jobs:
 
       - name: Run alteration gate (fail-closed)
         # Passes automatically when there are no changed files (no-op diff).
-        # When changes are present, requires exactly ONE authorization record under
-        # governance/alteration-program/authorization/records/ with authorizedBy == "jason".
+        # When changes are present, requires exactly ONE authorization record (.json) under
+        # governance/alteration-program/authorization/records/ with authorizedBy in the allowlist.
         run: python3 tools/ci_gate.py
