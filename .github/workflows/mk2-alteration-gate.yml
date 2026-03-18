@@ -2,13 +2,10 @@ name: mk2-alteration-gate
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, edited]
     branches: [ main ]
-  push:
-    branches: [ GhostValidation ]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   gate:
@@ -17,25 +14,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Resolves the "Blind Diff" issue
+          # FLAW FIX: Fetch full history so git diff can see the base branch
+          fetch-depth: 0
 
-      - name: Fetch Base
+      - name: Fetch Base Branch
+        # Ensures the 'main' branch is physically present in the runner's git graph
         run: git fetch origin main:main
 
-      - name: Run Gate
-        id: gate_run
-        run: |
-          # Isolate ONLY branch changes to clear traffic jams
-          FILES=$(git diff --name-only origin/main...HEAD)
-          python3 tools/ci_gate.py $FILES
-        continue-on-error: true
-
-      - name: Commit Logs
-        if: steps.gate_run.outcome == 'failure'
-        run: |
-          git config --local user.email "gatekeeper@auernyx.com"
-          git config --local user.name "Gate-Audit-Bot"
-          git add governance/quarantine/
-          git commit -m "AUDIT: Quarantined gate failure" || true
-          git push origin HEAD:Audit-Logs || true
-          exit 1
+      - name: Run Alteration Gate (Fail-Closed)
+        env:
+          # Dynamically calculate the merge-base to avoid "Blind Diff" errors
+          MK2_BASE_REF: ${{ github.event.pull_request.base.sha || 'main' }}
+        run: python3 tools/ci_gate.py
