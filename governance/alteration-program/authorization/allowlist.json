@@ -1,5 +1,15 @@
 {
   "authorizedLogins": [
-    "Ghostwolf101"
-  ]
+    "Ghostwolf101",
+    "Copilot",
+    "copilot-swe-agent"
+  ],
+  "notes": "authorizedLogins is the authoritative list consumed by auto-authorize.yml and tools/ci_gate.py. All other fields in this file are informational only.",
+  "suggestedActors": [
+    "github-copilot-app",
+    "devin-ai-integration[bot]",
+    "sweep-ai[bot]",
+    "coderabbitai[bot]"
+  ],
+  "suggestedActors_note": "Placeholders for additional coding-agent actors that may be added to authorizedLogins in the future. These are NOT active — add entries to authorizedLogins to activate them."
 }

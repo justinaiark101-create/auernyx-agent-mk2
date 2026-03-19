@@ -1,0 +1,6 @@
+{
+  "authorizedBy": "Ghostwolf101",
+  "authorizedAt": "2026-03-19",
+  "reason": "Add Copilot and copilot-swe-agent to the authorized allowlist so that auto-authorize.yml can create governance records for Copilot-authored PRs, fixing recurring mk2-alteration-gate failures with Found: [].",
+  "pullRequest": 102
+}
