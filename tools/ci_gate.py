@@ -36,7 +36,9 @@ GOVERNANCE_CRITICAL_PREFIXES = [
     f"{PREFIX}tools/ci_gate.py",
     f"{PREFIX}.github/workflows/",
     f"{PREFIX}core/kintsugi/",
-    f"{PREFIX}governance/alteration-program/",
+    f"{PREFIX}governance/alteration-program/intent/",
+    f"{PREFIX}governance/alteration-program/logs/",
+    f"{PREFIX}governance/alteration-program/schema/",
 ]
 
 GITHUB_LOGIN_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
