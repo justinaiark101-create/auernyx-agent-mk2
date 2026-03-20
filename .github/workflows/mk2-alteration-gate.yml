@@ -23,6 +23,6 @@ jobs:
 
       - name: Run Alteration Gate (Fail-Closed)
         env:
-          # Dynamically calculate the merge-base to avoid "Blind Diff" errors
+          # Use the PR base SHA (or 'main') so git diff base...HEAD can compute the merge-base and avoid "Blind Diff" errors
           MK2_BASE_REF: ${{ github.event.pull_request.base.sha || 'main' }}
         run: python3 tools/ci_gate.py
