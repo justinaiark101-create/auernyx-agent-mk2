@@ -181,10 +181,6 @@ def main():
 
     assert_append_only_trace_files(files, append_only_base)
 
-    if not files:
-        print("Mk2 Alteration Gate: PASS (empty diff, no changes to validate)")
-        return
-
     auth_records = get_changed_auth_records(files)
     if len(auth_records) != 1:
         raise SystemExit(
