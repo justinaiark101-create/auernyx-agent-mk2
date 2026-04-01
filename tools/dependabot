@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+import argparse, json, os, secrets, time
+from datetime import datetime, timezone
+
+INTENT_DIR = "governance/alteration-program/intent"
+
+def now():
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+def new_intent_id():
+    ms = int(time.time() * 1000)
+    return f"{ms}-{secrets.token_hex(4)}"
+
+def write_json(path, obj):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, indent=2)
+        f.write("\n")
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--commit", required=True)
+    ap.add_argument("--actor-id", required=True)
+    a = ap.parse_args()
+
+    iid = new_intent_id()
+    obj = {
+        "intentId": iid,
+        "title": f"Automated dependency update {a.commit[:8]}",
+        "system": "auernyx-agent-mk2",
+        "changeClass": "leaf",
+        "scope": {"in": ["dependencies"], "out": []},
+        "riskClass": "low",
+        "governanceImpact": False,
+        "actorId": a.actor_id,
+        "commitRef": a.commit,
+        "createdAt": now(),
+        "status": "in_review",
+        "verification": {
+            "plan": "Automated dependency update via Dependabot.",
+            "requiredChecks": ["mk2-alteration-gate"]
+        },
+        "evidence": {"required": False, "receiptRefs": [], "notes": ""},
+        "amendments": []
+    }
+
+    path = os.path.join(INTENT_DIR, f"{iid}.json")
+    write_json(path, obj)
+    print(f"Intent file generated: {path}")
+    print(f"IntentId: {iid}")
+
+if __name__ == "__main__":
+    main()
