@@ -1,4 +1,4 @@
- name: Branch Registry Update
+name: Branch Registry Update
 
 on:
   schedule:
