@@ -1,0 +1,9 @@
+{
+  "governance_record": "2026-04-21-pr-2",
+  "authorization_logic": "justinaiark101-create authorized via allowlist for PR #2: Revert \"Update connected branch registry (auto-discovery)\"",
+  "signature": "justinaiark101-create-2026-04-21-pr2",
+  "authorizedBy": "justinaiark101-create",
+  "authorizedAt": "2026-04-21",
+  "reason": "PR #2: Revert \"Update connected branch registry (auto-discovery)\"",
+  "pullRequest": 2
+}
