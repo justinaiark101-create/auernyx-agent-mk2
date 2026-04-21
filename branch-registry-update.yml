@@ -26,7 +26,7 @@ jobs:
           cache: "npm"
 
       - name: Install deps
-        run: npm ci
+        run: npm install
 
       - name: Generate matrix
         run: node tools/volatility/generate-matrix.mjs
