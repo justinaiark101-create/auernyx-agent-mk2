@@ -1,6 +1,6 @@
 {
   "stagingBranch": "staging/platform-canary",
-  "generatedAt": "2026-07-03T23:29:14.430Z",
+  "generatedAt": "2026-09-07T04:50:41.928Z",
   "branches": [
     {
       "name": "ci/registry-update",
